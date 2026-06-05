@@ -7,7 +7,7 @@ export default function Cart() {
   const [agreementChecked, setAgreementChecked] = useState(false);
 
   const subtotal = getCartTotal();
-  const shippingCharge = 150; // standard bKash delivery fee in BDT
+  const shippingCharge = 120; // standard bKash delivery fee in BDT
   const totalCost = subtotal + shippingCharge;
 
   const handleCheckoutClick = () => {
@@ -167,7 +167,7 @@ export default function Cart() {
                   <Info size={14} color="var(--accent)" style={{ shrink: 0, marginTop: '2px' }} />
                   <span>bKash Payment Required</span>
                 </div>
-                <span>To prevent fake orders, you must pay the delivery charge of <strong>150 BDT</strong> via bKash immediately to process shipment. The jersey cost is Cash on Delivery (COD).</span>
+                <span>To prevent fake orders, you must pay the delivery charge of <strong>120 BDT</strong> via bKash immediately to process shipment. The jersey cost is Cash on Delivery (COD).</span>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)' }} />
@@ -185,7 +185,7 @@ export default function Cart() {
                   onChange={(e) => setAgreementChecked(e.target.checked)}
                   style={{ accentColor: 'var(--accent)', cursor: 'pointer', marginTop: '2px', shrink: 0 }}
                 />
-                <span>I understand that the 150 BDT delivery fee must be paid first via bKash, and I will submit the Transaction ID during checkout.</span>
+                <span>I understand that the 120 BDT delivery fee must be paid first via bKash, and I will submit the Transaction ID during checkout.</span>
               </label>
 
               {/* Checkout Trigger */}
