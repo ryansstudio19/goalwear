@@ -52,15 +52,15 @@ export default function Footer() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Phone size={14} color="var(--accent)" />
-                <span>+880 1712-345678</span>
+                <span>+880 1848-520875</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={14} color="var(--accent)" />
-                <span>support@goalwear.com</span>
+                <span>goalwearbb@gmail.com</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MapPin size={14} color="var(--accent)" />
-                <span>Stadium Avenue, Block C, Dhaka, Bangladesh</span>
+                <span>NO AVAILABLE SHOWROOM AT THIS MOMENT!</span>
               </div>
             </div>
           </div>
