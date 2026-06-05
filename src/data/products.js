@@ -3,17 +3,17 @@
 
 export const products = [
   {
-    id: "arg-home-2024",
-    name: "Argentina 2024 Home Jersey",
+    id: "arg-home-2026",
+    name: "Argentina 2026 WORLD CUP Home Jersey",
     category: "National Teams",
-    price: 3850,
-    originalPrice: 4500,
+    price: 450,
+    originalPrice: 500,
     isNew: true,
     isBestSeller: true,
     rating: 4.9,
-    image: "https://images.unsplash.com/photo-1620002075591-663806be44d9?auto=format&fit=crop&q=80&w=400", // Fallback thumbnail
-    description: "The official Argentina 2024 Home Jersey. Emblazoned with three gold stars honoring their World Cup victories. Crafted with ultra-breathable, moisture-wicking technology to keep you cool and dry on the pitch or in the stands.",
-    sizes: ["S", "M", "L", "XL", "XXL"],
+    image: "https://easydrop.asia/products/image-1777809771695-280330173.jpeg", // Fallback thumbnail
+    description: "The official Argentina 2026 WORLD CUP Home Jersey. Emblazoned with three gold stars honoring their World Cup victories. Crafted with ultra-breathable, moisture-wicking technology to keep you cool and dry on the pitch or in the stands.",
+    sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Recycled Polyester Doubleknit",
       Fit: "Slim fit",
