@@ -17,7 +17,7 @@ export default function Home() {
 
   const [activeFaq, setActiveFaq] = useState(null);
   const faqs = [
-    { q: "Is the pre-paid bKash delivery fee refundable?", a: "No, the 150 BDT delivery charge is paid first to secure your dispatch slot and confirm your COD package details. It is non-refundable once the shipping label is generated." },
+    { q: "Is the pre-paid bKash delivery fee refundable?", a: "No, the 120 BDT delivery charge is paid first to secure your dispatch slot and confirm your COD package details. It is non-refundable once the shipping label is generated." },
     { q: "How long does shipping take?", a: "Shipping takes 24-48 hours within Dhaka and 3-4 days nationwide across Bangladesh. Once confirmed, you can track order milestones on our Track Order page." },
     { q: "What is your return policy?", a: "We offer exchanges for sizing discrepancies within 7 days of delivery. Items must have tags attached, be unworn, and remain in original packaging." }
   ];
