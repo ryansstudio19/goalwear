@@ -46,7 +46,8 @@ export default function Contact() {
           <div>
             <h2 style={{ fontSize: '1.4rem', textTransform: 'uppercase', marginBottom: '16px', color: 'white' }}>Support Office</h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Our support team operates Saturday to Thursday from 10:00 AM to 8:00 PM (GMT+6) to assist with orders and returns.
+              "Our support team is available 24/7 to assist with your orders, sizing inquiries, and returns."
+              "আপনার অর্ডার, সাইজ সংক্রান্ত জিজ্ঞাসা এবং রিটার্ন প্রক্রিয়ায় সহায়তার জন্য আমাদের সাপোর্ট টিম ২৪/৭ (২৪ ঘণ্টা) নিয়োজিত রয়েছে।"
             </p>
           </div>
 
@@ -57,7 +58,7 @@ export default function Contact() {
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Phone Hotline</span>
-                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>+880 1712-345678</h4>
+                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>+880 1848-520875</h4>
               </div>
             </div>
 
@@ -67,7 +68,7 @@ export default function Contact() {
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Email Support</span>
-                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>support@goalwear.com</h4>
+                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>goalwearbb@gmail.com</h4>
               </div>
             </div>
 
@@ -77,7 +78,7 @@ export default function Contact() {
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>HQ Showroom</span>
-                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>Stadium Avenue, Block C, Dhaka</h4>
+                <h4 style={{ fontSize: '0.95rem', color: 'white' }}>NO AVAILABLE SHOWROOM AT THIS MOMENT!</h4>
               </div>
             </div>
           </div>
