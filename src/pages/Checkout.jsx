@@ -13,7 +13,7 @@ export default function Checkout() {
   const [bkashTxnId, setBkashTxnId] = useState('');
 
   const subtotal = getCartTotal();
-  const deliveryFee = 150;
+  const deliveryFee = 120;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -176,7 +176,7 @@ export default function Checkout() {
                     <span>How to pre-pay bKash Fee:</span>
                   </div>
                   1. Open your bKash app and select <strong>Send Money</strong>.<br />
-                  2. Enter our recipient number: <strong style={{ color: 'white' }}>01848-520875</strong>.<br />
+                  2. Enter our recipient number: <strong style={{ color: 'white' }}> 01848-520875 </strong>.<br />
                   3. Enter amount: <strong style={{ color: 'var(--accent)' }}>120 BDT</strong>.<br />
                   4. Complete transaction, then fill in the sender number and Transaction ID (TxnID) below.
                 </div>
@@ -265,7 +265,7 @@ export default function Checkout() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>Delivery Charge (Prepaid):</span>
-                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>150 BDT</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>120 BDT</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>Payment Mode:</span>
@@ -287,7 +287,7 @@ export default function Checkout() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent)', fontWeight: 700 }}>
                 <span>Pay via bKash Now:</span>
-                <span>150 BDT</span>
+                <span>120 BDT</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontWeight: 700 }}>
                 <span>Due on Handover (COD):</span>
