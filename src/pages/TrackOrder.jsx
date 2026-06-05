@@ -130,7 +130,7 @@ export default function TrackOrder() {
                   <div>
                     <strong style={{ color: 'white', display: 'block', marginBottom: '2px' }}>Payment Verification Failed</strong>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      Our admin rejected the payment because the bKash Transaction ID submitted is invalid. Please contact support at support@goalwear.com to resubmit.
+                      Our admin rejected the payment because the bKash Transaction ID submitted is invalid. Please contact support at goalwearbb@gmail.com to resubmit.
                     </span>
                   </div>
                 </div>
