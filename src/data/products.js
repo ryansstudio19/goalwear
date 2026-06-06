@@ -37,17 +37,17 @@ export const products = [
     ]
   },
   {
-    id: "rm-home-24",
-    name: "Real Madrid 24/25 Home Jersey",
+    id: "rm-home-25/26",
+    name: "Real Madrid 25/26 Home Jersey",
     category: "Club Teams",
-    price: 4200,
-    originalPrice: 4800,
+    price: 450,
+    originalPrice: 500,
     isNew: true,
     isBestSeller: true,
     rating: 4.8,
-    image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=400",
-    description: "Real Madrid 2024/25 official home shirt. Features a clean, minimalistic white design with premium houndstooth pattern texturing and gold stripes highlighting the royal club's dominance.",
-    sizes: ["S", "M", "L", "XL", "XXL"],
+    image: "https://easydrop.asia/products/image-1776588693696-692210727.jpeg",
+    description: "Real Madrid 2025/26 official home shirt. Features a clean, minimalistic white design with premium houndstooth pattern texturing and gold stripes highlighting the royal club's dominance.",
+    sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Polyester Mock Eyelet",
       Fit: "Athletic/Player fit",
@@ -69,17 +69,17 @@ export const products = [
     ]
   },
   {
-    id: "barca-home-24",
-    name: "FC Barcelona 24/25 Home Jersey",
+    id: "barca-home-25/26",
+    name: "FC Barcelona 25/26 Home Jersey",
     category: "Club Teams",
-    price: 4150,
-    originalPrice: 4700,
+    price: 450,
+    originalPrice: 500,
     isNew: true,
     isBestSeller: false,
     rating: 4.7,
-    image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=400",
-    description: "The FC Barcelona 24/25 season home jersey celebrates the club's 125th anniversary. A classic vertical split pattern returning to the iconic blaugrana colors with gold details.",
-    sizes: ["M", "L", "XL"],
+    image: "https://easydrop.asia/products/image-1776588932109-152534089.jpeg",
+    description: "The FC Barcelona 25/26 season home jersey celebrates the club's 125th anniversary. A classic vertical split pattern returning to the iconic blaugrana colors with gold details.",
+    sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Recycled Polyester",
       Fit: "Slim fit",
@@ -102,49 +102,18 @@ export const products = [
     ]
   },
   {
-    id: "manc-home-24",
-    name: "Manchester City 24/25 Home Jersey",
-    category: "Club Teams",
-    price: 3950,
-    originalPrice: 4500,
-    isNew: false,
-    isBestSeller: true,
-    rating: 4.8,
-    image: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=400",
-    description: "Manchester City 24/25 Home shirt. Featuring details inspired by the 0161 area code of Manchester on the collar and cuffs, matching the club's deep roots in the city.",
-    sizes: ["S", "M", "L", "XL"],
-    specs: {
-      Material: "100% Jacquard Polyester",
-      Fit: "Regular fit",
-      Technology: "dryCELL moisture management",
-      Crest: "Embroidered club badge",
-      Details: "0161 graphic collar details"
-    },
-    design: {
-      primaryColor: "#6caddf",      // Sky blue
-      secondaryColor: "#1c2c5b",    // Dark navy details
-      stripeType: "solid",
-      sponsorText: "Etihad Airways",
-      numberText: "17",
-      collarColor: "#1c2c5b",
-      badgeColor: "#1c2c5b"
-    },
-    reviews: [
-      { id: 1, user: "Samiul O.", rating: 5, comment: "Great color and fabric feel. Speed delivery too!", date: "2026-05-25" }
-    ]
-  },
-  {
-    id: "bra-home-2024",
-    name: "Brazil 2024 Home Jersey",
+
+    id: "bra-home-2026",
+    name: "Brazil 2026 WORLD CUP Home Jersey",
     category: "National Teams",
-    price: 3800,
-    originalPrice: 4400,
+    price: 450,
+    originalPrice: 500,
     isNew: false,
     isBestSeller: true,
     rating: 4.6,
-    image: "https://images.unsplash.com/photo-1504159506876-f8338247a14a?auto=format&fit=crop&q=80&w=400",
-    description: "The 2024 Brazil Home Jersey features the iconic yellow with subtle texture patterns celebrating Brazil's biodiversity and rich musical heritage. Completed with a centered CBF crest.",
-    sizes: ["S", "M", "L", "XL", "XXL"],
+    image: "https://easydrop.asia/products/image-1777810429237-292865735.jpeg",
+    description: "The 2026 WORLD CUP Brazil Home Jersey features the iconic yellow with subtle texture patterns celebrating Brazil's biodiversity and rich musical heritage. Completed with a centered CBF crest.",
+    sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Recycled Polyester Jacquard",
       Fit: "Standard fit",
@@ -166,49 +135,18 @@ export const products = [
     ]
   },
   {
-    id: "ars-home-24",
-    name: "Arsenal 24/25 Home Jersey",
-    category: "Club Teams",
-    price: 4100,
-    originalPrice: 4650,
-    isNew: true,
-    isBestSeller: false,
-    rating: 4.9,
-    image: "https://images.unsplash.com/photo-1589487390382-6ebf70c2a210?auto=format&fit=crop&q=80&w=400",
-    description: "The Arsenal 2024/25 Home Jersey brings back the iconic clean white sleeves over a solid red torso design. Features the clean Canon emblem in place of the standard club crest.",
-    sizes: ["S", "M", "L", "XL"],
-    specs: {
-      Material: "100% Polyester Doubleknit",
-      Fit: "Slim fit",
-      Technology: "AEROREADY ventilation",
-      Crest: "Woven Cannon crest",
-      Details: "Contrasting white sleeves and dark navy details"
-    },
-    design: {
-      primaryColor: "#ef3e36",      // Red
-      secondaryColor: "#ffffff",    // White
-      stripeType: "sleeves-contrast", // Red body, white sleeves
-      sponsorText: "Fly Emirates",
-      numberText: "8",
-      collarColor: "#ef3e36",
-      badgeColor: "#ef3e36"
-    },
-    reviews: [
-      { id: 1, user: "Abir S.", rating: 5, comment: "The cannon emblem is perfect. Jersey fits like a glove.", date: "2026-06-01" }
-    ]
-  },
-  {
-    id: "ger-home-24",
-    name: "Germany 2024 Home Jersey",
+    
+    id: "ger-home-26",
+    name: "Germany 2026 WORLD CUP Home Jersey",
     category: "National Teams",
-    price: 3750,
-    originalPrice: 4300,
+    price: 450,
+    originalPrice: 500,
     isNew: false,
     isBestSeller: false,
     rating: 4.7,
-    image: "https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&q=80&w=400",
-    description: "The Germany 2024 Home Jersey features a clean white base with an eye-catching eagle-wing-inspired sleeve gradient in the black, red, and gold of the German flag.",
-    sizes: ["S", "M", "L", "XL"],
+    image: "https://easydrop.asia/products/image-1777810713597-603805258.jpeg",
+    description: "The Germany 2026 WORLD CUP Home Jersey features a clean white base with an eye-catching eagle-wing-inspired sleeve gradient in the black, red, and gold of the German flag.",
+    sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Recycled Polyester",
       Fit: "Regular fit",
@@ -230,16 +168,16 @@ export const products = [
     ]
   },
   {
-    id: "fra-home-24",
-    name: "France 2024 Home Jersey",
+    id: "fra-home-26",
+    name: "France 2026 WORLD CUP Home Jersey",
     category: "National Teams",
-    price: 3900,
-    originalPrice: 4500,
+    price: 450,
+    originalPrice: 500,
     isNew: true,
     isBestSeller: true,
     rating: 4.8,
-    image: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&q=80&w=400",
-    description: "France 2024 Home Jersey. Highlighting the classic royal blue base with an oversized retro rooster crest and a tricolor collar honoring the French Republic.",
+    image: "https://easydrop.asia/products/image-1777810546145-126722545.jpeg",
+    description: "France 2026 WORLD CUP Home Jersey. Highlighting the classic royal blue base with an oversized retro rooster crest and a tricolor collar honoring the French Republic.",
     sizes: ["M", "L", "XL", "XXL"],
     specs: {
       Material: "100% Recycled Polyester",
