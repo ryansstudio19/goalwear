@@ -1,384 +1,292 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 
-export default function JerseyViewer3D({ design }) {
-  const containerRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [zoom, setZoom] = useState(5);
-  const [autoRotate, setAutoRotate] = useState(true);
-  const [rotationY, setRotationY] = useState(0);
+// ─────────────────────────────────────────────────────────────────────────────
+// HOW TO ADD REAL JERSEY PHOTOS:
+// 1. Upload front & back jersey photos to imgbb.com (free)
+// 2. Copy the "Direct link" from each upload
+// 3. In your products.js, add to each product:
+//      imageFront: "https://i.ibb.co/xxxx/front.jpg"
+//      imageBack:  "https://i.ibb.co/xxxx/back.jpg"
+// 4. In ProductPage.jsx, pass them to this component:
+//      <JerseyViewer3D design={product.design} imageFront={product.imageFront} imageBack={product.imageBack} />
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // Keep references to access from event listeners and animate loop
-  const sceneRef = useRef(null);
-  const cameraRef = useRef(null);
-  const rendererRef = useRef(null);
-  const jerseyGroupRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const previousMousePositionRef = useRef({ x: 0, y: 0 });
-  const animationFrameIdRef = useRef(null);
+export default function JerseyViewer3D({ design, imageFront, imageBack }) {
+  const containerRef            = useRef(null);
+  const canvasRef               = useRef(null);
+  const sceneRef                = useRef(null);
+  const cameraRef               = useRef(null);
+  const rendererRef             = useRef(null);
+  const jerseyGroupRef          = useRef(null);
+  const isDraggingRef           = useRef(false);
+  const prevMouseRef            = useRef({ x: 0, y: 0 });
+  const animationFrameIdRef     = useRef(null);
+  const autoRotateRef           = useRef(true);   // ← ref keeps animate() in sync
+  const velocityRef             = useRef(0);       // ← inertia on drag release
 
-  // Helper to draw Front Texture on Canvas
-  const drawFrontTexture = (design) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
+  const [zoom, setZoom]               = useState(5);
+  const [autoRotate, setAutoRotate]   = useState(true);
+  const [rotationY, setRotationY]     = useState(0);
+  const [loadState, setLoadState]     = useState('loading'); // 'loading' | 'ready' | 'design'
 
-    // 1. Fill base color
-    ctx.fillStyle = design.primaryColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. Draw stripes
-    if (design.stripeType === 'vertical') {
-      const numStripes = 5;
-      const stripeWidth = canvas.width / numStripes;
+  // ── Fallback canvas textures (used when no real photo) ────────────────────
+  const makeFallbackFront = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = design.primaryColor || '#1a1a2e';
+    ctx.fillRect(0, 0, 512, 512);
+    if (design.stripeType === 'vertical' && design.stripeColor) {
       ctx.fillStyle = design.stripeColor;
-      for (let i = 0; i < numStripes; i++) {
-        if (i % 2 === 1) {
-          ctx.fillRect(i * stripeWidth, 0, stripeWidth, canvas.height);
-        }
-      }
-    } else if (design.stripeType === 'hoops') {
-      const numHoops = 8;
-      const hoopHeight = canvas.height / numHoops;
+      const sw = 512 / 5;
+      for (let i = 1; i < 5; i += 2) ctx.fillRect(i * sw, 0, sw, 512);
+    } else if (design.stripeType === 'hoops' && design.stripeColor) {
       ctx.fillStyle = design.stripeColor;
-      for (let i = 0; i < numHoops; i++) {
-        if (i % 2 === 1) {
-          ctx.fillRect(0, i * hoopHeight, canvas.width, hoopHeight);
-        }
-      }
+      const sh = 512 / 8;
+      for (let i = 1; i < 8; i += 2) ctx.fillRect(0, i * sh, 512, sh);
     }
-
-    // 3. Draw Brand logo (Right chest - when looking at jersey, it's left side of texture)
-    // The cylinder U goes from 0 on the left to 1 on the right.
-    // Right chest is around U = 0.35
-    ctx.fillStyle = design.secondaryColor;
-    ctx.font = 'bold 16px "Outfit", sans-serif';
+    ctx.fillStyle = design.secondaryColor || '#fff';
+    ctx.font = 'bold 42px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('GW', 170, 150);
-
-    // 4. Draw Club Crest (Left chest - around U = 0.65)
-    // Draw a small crest background shield
-    ctx.fillStyle = design.badgeColor || design.secondaryColor;
-    const cx = 340;
-    const cy = 150;
+    ctx.fillText(design.sponsorText || 'GoalWear', 256, 270);
+    // Badge shield
+    const bx = 330, by = 148;
+    ctx.fillStyle = design.badgeColor || design.secondaryColor || '#fff';
     ctx.beginPath();
-    ctx.moveTo(cx - 15, cy - 15);
-    ctx.lineTo(cx + 15, cy - 15);
-    ctx.lineTo(cx + 15, cy + 5);
-    ctx.quadraticCurveTo(cx + 15, cy + 18, cx, cy + 25);
-    ctx.quadraticCurveTo(cx - 15, cy + 18, cx - 15, cy + 5);
-    ctx.closePath();
-    ctx.fill();
-
-    // Crest text
-    ctx.fillStyle = design.primaryColor;
-    ctx.font = '900 10px "Outfit", sans-serif';
-    ctx.fillText('CLUB', cx, cy + 2);
-
-    // 5. Draw Sponsor Text (Center - U = 0.5)
-    ctx.fillStyle = design.secondaryColor;
-    ctx.font = 'bold 36px "Outfit", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(design.sponsorText || 'GoalWear', 256, 260);
-
-    // 6. Subtle gold trim/cuff lines at bottom of texture (front hem)
-    ctx.fillStyle = design.secondaryColor;
-    ctx.fillRect(0, canvas.height - 15, canvas.width, 15);
-
-    return new THREE.CanvasTexture(canvas);
+    ctx.moveTo(bx-18,by-18); ctx.lineTo(bx+18,by-18); ctx.lineTo(bx+18,by+4);
+    ctx.quadraticCurveTo(bx+18,by+20,bx,by+28);
+    ctx.quadraticCurveTo(bx-18,by+20,bx-18,by+4);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = design.secondaryColor || '#fff';
+    ctx.fillRect(0, 497, 512, 15);
+    return new THREE.CanvasTexture(c);
   };
 
-  // Helper to draw Back Texture on Canvas
-  const drawBackTexture = (design) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    // 1. Fill base color
-    ctx.fillStyle = design.primaryColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. Draw stripes
-    if (design.stripeType === 'vertical') {
-      const numStripes = 5;
-      const stripeWidth = canvas.width / numStripes;
+  const makeFallbackBack = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = design.primaryColor || '#1a1a2e';
+    ctx.fillRect(0, 0, 512, 512);
+    if (design.stripeType === 'vertical' && design.stripeColor) {
       ctx.fillStyle = design.stripeColor;
-      for (let i = 0; i < numStripes; i++) {
-        if (i % 2 === 1) {
-          ctx.fillRect(i * stripeWidth, 0, stripeWidth, canvas.height);
-        }
-      }
-    } else if (design.stripeType === 'hoops') {
-      const numHoops = 8;
-      const hoopHeight = canvas.height / numHoops;
+      const sw = 512 / 5;
+      for (let i = 1; i < 5; i += 2) ctx.fillRect(i * sw, 0, sw, 512);
+    } else if (design.stripeType === 'hoops' && design.stripeColor) {
       ctx.fillStyle = design.stripeColor;
-      for (let i = 0; i < numHoops; i++) {
-        if (i % 2 === 1) {
-          ctx.fillRect(0, i * hoopHeight, canvas.width, hoopHeight);
-        }
-      }
+      const sh = 512 / 8;
+      for (let i = 1; i < 8; i += 2) ctx.fillRect(0, i * sh, 512, sh);
     }
-
-    // 3. Draw Player Name (Centered - U = 0.5)
-    ctx.fillStyle = design.secondaryColor;
-    ctx.font = 'bold 24px "Outfit", sans-serif';
+    ctx.fillStyle = design.secondaryColor || '#fff';
+    ctx.font = 'bold 26px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('GOALWEAR', 256, 120);
-
-    // 4. Draw Player Number
-    ctx.font = '900 130px "Outfit", sans-serif';
-    ctx.fillText(design.numberText || '10', 256, 260);
-
-    // 5. Trim at bottom
-    ctx.fillStyle = design.secondaryColor;
-    ctx.fillRect(0, canvas.height - 15, canvas.width, 15);
-
-    return new THREE.CanvasTexture(canvas);
+    ctx.font = '900 130px sans-serif';
+    ctx.fillText(design.numberText || '10', 256, 275);
+    ctx.fillStyle = design.secondaryColor || '#fff';
+    ctx.fillRect(0, 497, 512, 15);
+    return new THREE.CanvasTexture(c);
   };
 
+  // ── Build jersey meshes ───────────────────────────────────────────────────
+  const buildJersey = (group, frontTex, backTex) => {
+    // Clear old meshes
+    while (group.children.length) {
+      const ch = group.children[0];
+      ch.geometry?.dispose();
+      group.remove(ch);
+    }
+
+    const prep = (t) => {
+      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 4;
+      t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.generateMipmaps = true;
+    };
+    prep(frontTex); prep(backTex);
+
+    const fMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.82, metalness: 0.05, side: THREE.DoubleSide });
+    const bMat = new THREE.MeshStandardMaterial({ map: backTex,  roughness: 0.82, metalness: 0.05, side: THREE.DoubleSide });
+    const sMat = new THREE.MeshStandardMaterial({
+      color: design.stripeType === 'sleeves-contrast' ? (design.secondaryColor || '#fff') : (design.primaryColor || '#1a1a2e'),
+      roughness: 0.85, metalness: 0.05
+    });
+    const cMat = new THREE.MeshStandardMaterial({ color: design.collarColor || design.secondaryColor || '#fff', roughness: 0.7 });
+
+    // Torso front half
+    group.add(new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.67, 1.7, 32, 1, true, -Math.PI/2, Math.PI), fMat));
+    // Torso back half
+    group.add(new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.67, 1.7, 32, 1, true,  Math.PI/2, Math.PI), bMat));
+
+    // Sleeves
+    [[-0.76, Math.PI/4.2], [0.76, -Math.PI/4.2]].forEach(([x, rz]) => {
+      const g = new THREE.CylinderGeometry(0.2, 0.16, 0.55, 16);
+      g.translate(0, -0.275, 0);
+      const m = new THREE.Mesh(g, sMat);
+      m.position.set(x, 0.6, 0);
+      m.rotation.z = rz;
+      m.rotation.x = 0.1;
+      group.add(m);
+    });
+
+    // Cuffs
+    const cuffG = new THREE.TorusGeometry(0.165, 0.02, 12, 32);
+    const cL = new THREE.Mesh(cuffG, cMat);
+    cL.position.set(-0.95, 0.4, 0.05);
+    cL.rotation.set(0.1, Math.PI/2, Math.PI/4.2);
+    group.add(cL);
+    const cR = new THREE.Mesh(cuffG, cMat);
+    cR.position.set(0.95, 0.4, 0.05);
+    cR.rotation.set(0.1, -Math.PI/2, -Math.PI/4.2);
+    group.add(cR);
+
+    // Collar
+    const col = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.045, 12, 48), cMat);
+    col.position.set(0, 0.85, 0);
+    col.rotation.x = Math.PI / 1.9;
+    group.add(col);
+  };
+
+  // ── Main Three.js effect ──────────────────────────────────────────────────
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
 
-    const width = containerRef.current.clientWidth;
-    const height = 400; // Fixed height for visual consistency
+    const width  = containerRef.current.clientWidth;
+    const height = 400;
 
-    // 1. Initialize Scene
+    // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // 2. Initialize Camera
+    // Camera
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
     camera.position.set(0, 0.2, zoom);
     cameraRef.current = camera;
 
-    // 3. Initialize Renderer
+    // Renderer
     const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.current,
-      antialias: true,
-      alpha: true,
-      preserveDrawingBuffer: true
+      canvas: canvasRef.current, antialias: true, alpha: true, preserveDrawingBuffer: true
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled   = true;
+    renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
     rendererRef.current = renderer;
 
-    // 4. Lights Setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-    scene.add(ambientLight);
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const kl = new THREE.DirectionalLight(0xffffff, 0.85); kl.position.set(1.5,1.5,3.5); scene.add(kl);
+    const fl = new THREE.DirectionalLight(0xffffff, 0.45); fl.position.set(-1.5,0.5,3.5); scene.add(fl);
+    const rl = new THREE.DirectionalLight(0x00ff88, 0.35); rl.position.set(0,3,-3); scene.add(rl);
 
-    // Dynamic front lights (stadium spotlight vibe)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
-    keyLight.position.set(1.5, 1.5, 3.5);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.45);
-    fillLight.position.set(-1.5, 0.5, 3.5);
-    scene.add(fillLight);
-
-    // Rim lighting to outline sleeves
-    const rimLight = new THREE.DirectionalLight(0x00ff88, 0.35);
-    rimLight.position.set(0, 3, -3);
-    scene.add(rimLight);
-
-    // 5. Construct Jersey Mesh Geometry Group
+    // Jersey group
     const jerseyGroup = new THREE.Group();
+    jerseyGroup.position.set(0, -0.1, 0);
     jerseyGroupRef.current = jerseyGroup;
     scene.add(jerseyGroup);
 
-    // Textures
-    const frontTex = drawFrontTexture(design);
-    const backTex = drawBackTexture(design);
+    // ── Load textures ────────────────────────────────────────────────────
+    const hasPhotos = !!(imageFront || imageBack);
 
-    // Adjust texture wraps
-    frontTex.wrapS = THREE.ClampToEdgeWrapping;
-    frontTex.wrapT = THREE.ClampToEdgeWrapping;
-    backTex.wrapS = THREE.ClampToEdgeWrapping;
-    backTex.wrapT = THREE.ClampToEdgeWrapping;
+    if (hasPhotos) {
+      setLoadState('loading');
+      const loader = new THREE.TextureLoader();
+      loader.crossOrigin = 'anonymous';
+      let ft, bt, count = 0;
+      const done = () => { count++; if (count === 2) { buildJersey(jerseyGroup, ft, bt); setLoadState('ready'); } };
+      ft = loader.load(imageFront || imageBack, done, undefined, () => { ft = makeFallbackFront(); done(); });
+      bt = loader.load(imageBack  || imageFront, done, undefined, () => { bt = makeFallbackBack();  done(); });
+    } else {
+      buildJersey(jerseyGroup, makeFallbackFront(), makeFallbackBack());
+      setLoadState('design');
+    }
 
-    // Materials
-    // A nice rough fabric material mapping
-    const frontMat = new THREE.MeshStandardMaterial({
-      map: frontTex,
-      roughness: 0.82,
-      metalness: 0.08,
-      side: THREE.DoubleSide
+    // ── Pointer events (drag with inertia) ───────────────────────────────
+    const getXY = (e) => ({
+      x: e.clientX ?? e.touches?.[0]?.clientX ?? 0,
+      y: e.clientY ?? e.touches?.[0]?.clientY ?? 0,
     });
 
-    const backMat = new THREE.MeshStandardMaterial({
-      map: backTex,
-      roughness: 0.82,
-      metalness: 0.08,
-      side: THREE.DoubleSide
-    });
-
-    const sleeveMat = new THREE.MeshStandardMaterial({
-      color: design.stripeType === 'sleeves-contrast' ? design.secondaryColor : design.primaryColor,
-      roughness: 0.85,
-      metalness: 0.05
-    });
-
-    const collarMat = new THREE.MeshStandardMaterial({
-      color: design.collarColor || design.secondaryColor,
-      roughness: 0.7
-    });
-
-    // Torso Front (180 degrees front half-cylinder)
-    const torsoFrontGeom = new THREE.CylinderGeometry(0.72, 0.67, 1.7, 32, 1, true, -Math.PI / 2, Math.PI);
-    const torsoFront = new THREE.Mesh(torsoFrontGeom, frontMat);
-    jerseyGroup.add(torsoFront);
-
-    // Torso Back (180 degrees back half-cylinder)
-    const torsoBackGeom = new THREE.CylinderGeometry(0.72, 0.67, 1.7, 32, 1, true, Math.PI / 2, Math.PI);
-    const torsoBack = new THREE.Mesh(torsoBackGeom, backMat);
-    jerseyGroup.add(torsoBack);
-
-    // Left Sleeve (Cylinder rotated out)
-    const sleeveLGeom = new THREE.CylinderGeometry(0.2, 0.16, 0.55, 16);
-    sleeveLGeom.translate(0, -0.275, 0); // Translate origin to shoulder join
-    const sleeveL = new THREE.Mesh(sleeveLGeom, sleeveMat);
-    sleeveL.position.set(-0.76, 0.6, 0);
-    sleeveL.rotation.z = Math.PI / 4.2; // Angle outward
-    sleeveL.rotation.x = 0.1;
-    jerseyGroup.add(sleeveL);
-
-    // Right Sleeve
-    const sleeveRGeom = new THREE.CylinderGeometry(0.2, 0.16, 0.55, 16);
-    sleeveRGeom.translate(0, -0.275, 0);
-    const sleeveR = new THREE.Mesh(sleeveRGeom, sleeveMat);
-    sleeveR.position.set(0.76, 0.6, 0);
-    sleeveR.rotation.z = -Math.PI / 4.2;
-    sleeveR.rotation.x = 0.1;
-    jerseyGroup.add(sleeveR);
-
-    // Sleeve Cuff Trim L
-    const cuffGeom = new THREE.TorusGeometry(0.165, 0.02, 12, 32);
-    const cuffL = new THREE.Mesh(cuffGeom, collarMat);
-    cuffL.position.set(-0.95, 0.4, 0.05);
-    cuffL.rotation.x = 0.1;
-    cuffL.rotation.z = Math.PI / 4.2;
-    cuffL.rotation.y = Math.PI / 2;
-    jerseyGroup.add(cuffL);
-
-    // Sleeve Cuff Trim R
-    const cuffR = new THREE.Mesh(cuffGeom, collarMat);
-    cuffR.position.set(0.95, 0.4, 0.05);
-    cuffR.rotation.x = 0.1;
-    cuffR.rotation.z = -Math.PI / 4.2;
-    cuffR.rotation.y = -Math.PI / 2;
-    jerseyGroup.add(cuffR);
-
-    // Collar Torus
-    const collarGeom = new THREE.TorusGeometry(0.33, 0.045, 12, 48);
-    const collar = new THREE.Mesh(collarGeom, collarMat);
-    collar.position.set(0, 0.85, 0);
-    collar.rotation.x = Math.PI / 1.9; // Slight angle forward
-    jerseyGroup.add(collar);
-
-    // Position Jersey in center of scene
-    jerseyGroup.position.set(0, -0.1, 0);
-
-    // 6. Drag and Rotation Controls
-    const handleMouseDown = (e) => {
-      isDraggingRef.current = true;
+    const onDown = (e) => {
+      isDraggingRef.current   = true;
+      autoRotateRef.current   = false;
+      velocityRef.current     = 0;
       setAutoRotate(false);
-      previousMousePositionRef.current = {
-        x: e.clientX || (e.touches && e.touches[0].clientX),
-        y: e.clientY || (e.touches && e.touches[0].clientY)
-      };
+      prevMouseRef.current = getXY(e);
     };
 
-    const handleMouseMove = (e) => {
-      if (!isDraggingRef.current) return;
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-
-      const deltaMove = {
-        x: clientX - previousMousePositionRef.current.x,
-        y: clientY - previousMousePositionRef.current.y
-      };
-
-      if (jerseyGroupRef.current) {
-        jerseyGroupRef.current.rotation.y += deltaMove.x * 0.01;
-        jerseyGroupRef.current.rotation.x += deltaMove.y * 0.01;
-        // Limit X rotation to avoid looking underneath
-        jerseyGroupRef.current.rotation.x = Math.max(-0.4, Math.min(0.4, jerseyGroupRef.current.rotation.x));
-        setRotationY(jerseyGroupRef.current.rotation.y);
-      }
-
-      previousMousePositionRef.current = {
-        x: clientX,
-        y: clientY
-      };
+    const onMove = (e) => {
+      if (!isDraggingRef.current || !jerseyGroupRef.current) return;
+      const { x, y } = getXY(e);
+      const dx = x - prevMouseRef.current.x;
+      const dy = y - prevMouseRef.current.y;
+      jerseyGroupRef.current.rotation.y += dx * 0.01;
+      jerseyGroupRef.current.rotation.x  = Math.max(-0.4, Math.min(0.4, jerseyGroupRef.current.rotation.x + dy * 0.01));
+      velocityRef.current = dx * 0.01;
+      setRotationY(jerseyGroupRef.current.rotation.y);
+      prevMouseRef.current = { x, y };
     };
 
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-    };
+    const onUp = () => { isDraggingRef.current = false; };
 
-    const canvasElement = canvasRef.current;
-    
-    // Desktop Mouse Events
-    canvasElement.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    const cvs = canvasRef.current;
+    cvs.addEventListener('mousedown',  onDown);
+    window.addEventListener('mousemove',  onMove);
+    window.addEventListener('mouseup',    onUp);
+    cvs.addEventListener('touchstart', onDown, { passive: true });
+    window.addEventListener('touchmove',  onMove, { passive: true });
+    window.addEventListener('touchend',   onUp);
 
-    // Touch Mobile Events
-    canvasElement.addEventListener('touchstart', handleMouseDown, { passive: true });
-    window.addEventListener('touchmove', handleMouseMove, { passive: true });
-    window.addEventListener('touchend', handleMouseUp);
-
-    // 7. Animation Loop
+    // ── Animation loop ───────────────────────────────────────────────────
     const animate = () => {
       animationFrameIdRef.current = requestAnimationFrame(animate);
+      if (!jerseyGroupRef.current) return;
 
-      if (autoRotate && jerseyGroupRef.current) {
+      if (autoRotateRef.current) {
         jerseyGroupRef.current.rotation.y += 0.007;
+        setRotationY(jerseyGroupRef.current.rotation.y);
+      } else if (!isDraggingRef.current && Math.abs(velocityRef.current) > 0.0001) {
+        // Inertia after drag
+        jerseyGroupRef.current.rotation.y += velocityRef.current;
+        velocityRef.current *= 0.93;
         setRotationY(jerseyGroupRef.current.rotation.y);
       }
 
-      // Add a very subtle floating bounce effect
-      if (jerseyGroupRef.current) {
-        const time = Date.now() * 0.0015;
-        jerseyGroupRef.current.position.y = -0.1 + Math.sin(time) * 0.04;
-      }
-
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-      }
+      // Gentle float
+      jerseyGroupRef.current.position.y = -0.1 + Math.sin(Date.now() * 0.0015) * 0.04;
+      renderer.render(scene, camera);
     };
-
     animate();
 
-    // Resize Handler
-    const handleResize = () => {
-      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
+    // Resize
+    const onResize = () => {
+      if (!containerRef.current) return;
       const w = containerRef.current.clientWidth;
-      cameraRef.current.aspect = w / height;
-      cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(w, height);
+      camera.aspect = w / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, height);
     };
+    window.addEventListener('resize', onResize);
 
-    window.addEventListener('resize', handleResize);
-
-    // Clean up
     return () => {
       cancelAnimationFrame(animationFrameIdRef.current);
-      canvasElement.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      canvasElement.removeEventListener('touchstart', handleMouseDown);
-      window.removeEventListener('touchmove', handleMouseMove);
-      window.removeEventListener('touchend', handleMouseUp);
-      window.removeEventListener('resize', handleResize);
+      cvs.removeEventListener('mousedown',  onDown);
+      window.removeEventListener('mousemove',  onMove);
+      window.removeEventListener('mouseup',    onUp);
+      cvs.removeEventListener('touchstart', onDown);
+      window.removeEventListener('touchmove',  onMove);
+      window.removeEventListener('touchend',   onUp);
+      window.removeEventListener('resize',     onResize);
+      renderer.dispose();
     };
-  }, [design]); // Re-render scene when team design configuration changes!
+  }, [design, imageFront, imageBack]);
 
-  // Update camera zoom in dynamic state
+  // Sync zoom to camera
   useEffect(() => {
     if (cameraRef.current) {
       cameraRef.current.position.z = zoom;
@@ -386,134 +294,123 @@ export default function JerseyViewer3D({ design }) {
     }
   }, [zoom]);
 
-  const triggerResetRotation = (face) => {
+  // Snap to face
+  const snapTo = (face) => {
+    autoRotateRef.current = false;
     setAutoRotate(false);
+    velocityRef.current = 0;
     if (jerseyGroupRef.current) {
       jerseyGroupRef.current.rotation.x = 0;
-      if (face === 'front') {
-        jerseyGroupRef.current.rotation.y = 0;
-      } else {
-        jerseyGroupRef.current.rotation.y = Math.PI; // 180 degrees
-      }
+      jerseyGroupRef.current.rotation.y = face === 'front' ? 0 : Math.PI;
       setRotationY(jerseyGroupRef.current.rotation.y);
     }
   };
 
+  const toggleSpin = () => {
+    const next = !autoRotateRef.current;
+    autoRotateRef.current = next;
+    setAutoRotate(next);
+  };
+
+  // ── UI ───────────────────────────────────────────────────────────────────
   return (
     <div ref={containerRef} style={{ width: '100%', position: 'relative' }}>
-      <canvas 
-        ref={canvasRef} 
-        style={{ 
-          width: '100%', 
-          height: '400px', 
-          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
-          display: 'block'
-        }} 
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '400px', cursor: isDraggingRef.current ? 'grabbing' : 'grab', display: 'block' }}
       />
 
-      {/* Spotlights Visual indicator overlay */}
+      {/* Loading overlay — only shows when real photos are loading */}
+      {loadState === 'loading' && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', gap: '14px',
+        }}>
+          <div style={{
+            width: '36px', height: '36px',
+            border: '2px solid rgba(255,255,255,0.1)',
+            borderTop: '2px solid var(--accent, #00ff88)',
+            borderRadius: '50%', animation: 'gwspin 0.75s linear infinite',
+          }} />
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', letterSpacing: '0.08em' }}>
+            LOADING JERSEY PHOTO...
+          </span>
+          <style>{`@keyframes gwspin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+      {/* Status dot + label */}
       <div style={{
-        position: 'absolute',
-        top: '12px',
-        left: '12px',
-        fontSize: '0.7rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        color: 'var(--text-muted)',
-        pointerEvents: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
+        position: 'absolute', top: '12px', left: '12px',
+        display: 'flex', alignItems: 'center', gap: '6px',
+        fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.1em',
+        color: 'var(--text-muted, rgba(255,255,255,0.5))', pointerEvents: 'none',
       }}>
         <span style={{
-          width: '6px',
-          height: '6px',
-          backgroundColor: autoRotate ? 'var(--accent)' : 'var(--text-muted)',
-          borderRadius: '50%',
-          display: 'inline-block',
-          boxShadow: autoRotate ? '0 0 5px var(--accent)' : 'none'
+          width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block',
+          backgroundColor: autoRotate ? 'var(--accent, #00ff88)' : 'var(--text-muted, rgba(255,255,255,0.4))',
+          boxShadow: autoRotate ? '0 0 5px var(--accent, #00ff88)' : 'none',
+          transition: 'all 0.3s',
         }} />
-        <span>3D Stadium Sandbox</span>
+        {loadState === 'ready'  ? '3D Real Photo View'
+       : loadState === 'design' ? '3D Design View'
+       : 'Loading...'}
       </div>
 
-      {/* Viewer controls overlay */}
+      {/* Hint: no photos yet */}
+      {loadState === 'design' && (
+        <div style={{
+          position: 'absolute', top: '12px', right: '12px',
+          background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.3)',
+          borderRadius: '8px', padding: '5px 9px',
+          fontSize: '0.62rem', color: '#ffa726', lineHeight: 1.4, maxWidth: '160px',
+        }}>
+          📸 Add <strong>imageFront</strong> &amp; <strong>imageBack</strong> to show real photo
+        </div>
+      )}
+
+      {/* Controls */}
       <div style={{
-        position: 'absolute',
-        bottom: '16px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        gap: '8px',
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid var(--border-glass)',
-        padding: '6px 12px',
-        borderRadius: '30px',
-        zIndex: 5
+        position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', gap: '8px', alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+        border: '1px solid var(--border-glass, rgba(255,255,255,0.1))',
+        padding: '6px 12px', borderRadius: '30px', zIndex: 5,
       }}>
-        <button 
-          onClick={() => triggerResetRotation('front')}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            padding: '4px 10px',
-            borderRadius: '15px',
-            backgroundColor: rotationY % (2*Math.PI) === 0 ? 'var(--accent)' : 'transparent',
-            color: rotationY % (2*Math.PI) === 0 ? '#000' : '#fff',
-            transition: 'var(--transition-fast)'
-          }}
-        >
-          Front
-        </button>
-        <button 
-          onClick={() => triggerResetRotation('back')}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            padding: '4px 10px',
-            borderRadius: '15px',
-            backgroundColor: Math.abs(rotationY % (2*Math.PI) - Math.PI) < 0.1 ? 'var(--accent)' : 'transparent',
-            color: Math.abs(rotationY % (2*Math.PI) - Math.PI) < 0.1 ? '#000' : '#fff',
-            transition: 'var(--transition-fast)'
-          }}
-        >
-          Back
-        </button>
-        <button 
-          onClick={() => setAutoRotate(!autoRotate)}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            padding: '4px 10px',
-            borderRadius: '15px',
-            backgroundColor: autoRotate ? 'rgba(0, 255, 136, 0.2)' : 'transparent',
-            color: autoRotate ? 'var(--accent)' : '#fff',
-            border: autoRotate ? '1px solid var(--accent)' : '1px solid transparent',
-            transition: 'var(--transition-fast)'
-          }}
-        >
+        {/* Front */}
+        <button onClick={() => snapTo('front')} style={{
+          fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+          padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', border: 'none',
+          backgroundColor: 'transparent', color: '#fff', transition: 'var(--transition-fast, all 0.2s)',
+        }}>Front</button>
+
+        {/* Back */}
+        <button onClick={() => snapTo('back')} style={{
+          fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+          padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', border: 'none',
+          backgroundColor: 'transparent', color: '#fff', transition: 'var(--transition-fast, all 0.2s)',
+        }}>Back</button>
+
+        {/* Spin */}
+        <button onClick={toggleSpin} style={{
+          fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+          padding: '4px 10px', borderRadius: '15px', cursor: 'pointer',
+          backgroundColor: autoRotate ? 'rgba(0,255,136,0.2)' : 'transparent',
+          color: autoRotate ? 'var(--accent, #00ff88)' : '#fff',
+          border: autoRotate ? '1px solid var(--accent, #00ff88)' : '1px solid transparent',
+          transition: 'var(--transition-fast, all 0.2s)',
+        }}>
           {autoRotate ? 'Spinning' : 'Spin'}
         </button>
-        
-        {/* Separator */}
-        <span style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', margin: '2px 4px' }} />
 
-        {/* Zoom Controls */}
-        <button 
-          onClick={() => setZoom(Math.max(3.5, zoom - 0.5))} 
-          style={{ color: '#fff', fontSize: '1rem', fontWeight: 900, padding: '0 6px' }}
-        >
-          +
-        </button>
-        <button 
-          onClick={() => setZoom(Math.min(6.5, zoom + 0.5))}
-          style={{ color: '#fff', fontSize: '1rem', fontWeight: 900, padding: '0 6px' }}
-        >
-          -
-        </button>
+        <span style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', margin: '2px 4px', alignSelf: 'stretch' }} />
+
+        {/* Zoom */}
+        <button onClick={() => setZoom(z => Math.max(3.5, z - 0.5))}
+          style={{ color: '#fff', fontSize: '1rem', fontWeight: 900, padding: '0 6px', background: 'none', border: 'none', cursor: 'pointer' }}>+</button>
+        <button onClick={() => setZoom(z => Math.min(6.5, z + 0.5))}
+          style={{ color: '#fff', fontSize: '1rem', fontWeight: 900, padding: '0 6px', background: 'none', border: 'none', cursor: 'pointer' }}>−</button>
       </div>
     </div>
   );
