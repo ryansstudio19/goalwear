@@ -13,7 +13,7 @@ export default function FAQ() {
     },
     {
       q: "Is it safe to submit my bKash Transaction ID?",
-      a: "Yes. The Transaction ID (TxnID) is used solely by our admin to verify that the 150 BDT delivery fee has been sent. Your details are encrypted locally and are not shared with any third party.",
+      a: "Yes. The Transaction ID (TxnID) is used solely by our admin to verify that the 120 BDT delivery fee has been sent. Your details are encrypted locally and are not shared with any third party.",
       cat: "Payment"
     },
     {
@@ -28,7 +28,7 @@ export default function FAQ() {
     },
     {
       q: "Can I customize the name and number printed on the back?",
-      a: "Currently, our standard stock jerseys come with preset legendary numbers (e.g. Messi 10, Vinicius 7, De Bruyne 17). Custom printing can be requested by leaving a note on our Contact page.",
+      a: "Custom printing can be requested by leaving a note on our Contact page.",
       cat: "Product"
     },
     {
