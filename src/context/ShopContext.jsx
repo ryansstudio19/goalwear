@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { products } from '../data/products';
+import { supabase } from '../supabaseClient';
 
 export const ShopContext = createContext();
 
@@ -13,48 +14,16 @@ export const ShopContextProvider = ({ children }) => {
     const savedCart = localStorage.getItem('goalwear_cart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
-  
+
   const [wishlist, setWishlist] = useState(() => {
     const savedWishlist = localStorage.getItem('goalwear_wishlist');
     return savedWishlist ? JSON.parse(savedWishlist) : [];
   });
 
-  const [orders, setOrders] = useState(() => {
-    const savedOrders = localStorage.getItem('goalwear_orders');
-    if (savedOrders) {
-      return JSON.parse(savedOrders);
-    }
-    // Seed database with a sample order for demonstration/admin convenience
-    const initialSeed = [
-      {
-        id: "GW-58492",
-        date: "2026-06-02 18:30",
-        customerName: "Rohan Ahmed",
-        phone: "01712345678",
-        address: "House 24, Road 5, Dhanmondi, Dhaka",
-        bkashNumber: "01712345678",
-        bkashTxnId: "BKD839SF2G",
-        items: [
-          {
-            product: products[0],
-            size: "M",
-            quantity: 1
-          },
-          {
-            product: products[1],
-            size: "L",
-            quantity: 1
-          }
-        ],
-        subtotal: 8050,
-        deliveryCharge: 150,
-        total: 8200,
-        status: "Pending verification"
-      }
-    ];
-    localStorage.setItem('goalwear_orders', JSON.stringify(initialSeed));
-    return initialSeed;
-  });
+  // Orders now live in Supabase, not localStorage.
+  // Empty array until the first fetch completes.
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   // Dynamic reviews list
   const [customReviews, setCustomReviews] = useState(() => {
@@ -62,7 +31,7 @@ export const ShopContextProvider = ({ children }) => {
     return savedReviews ? JSON.parse(savedReviews) : {};
   });
 
-  // Sync to local storage
+  // Sync cart/wishlist/reviews to local storage (these stay local, no need for a backend)
   useEffect(() => {
     localStorage.setItem('goalwear_cart', JSON.stringify(cart));
   }, [cart]);
@@ -72,12 +41,57 @@ export const ShopContextProvider = ({ children }) => {
   }, [wishlist]);
 
   useEffect(() => {
-    localStorage.setItem('goalwear_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
     localStorage.setItem('goalwear_custom_reviews', JSON.stringify(customReviews));
   }, [customReviews]);
+
+  // --- Supabase orders: fetch + realtime sync ---
+
+  // Converts a Supabase row (snake_case) into the shape the rest of the app expects (camelCase)
+  const mapRowToOrder = (row) => ({
+    id: row.id,
+    date: row.created_at,
+    customerName: row.customer_name,
+    phone: row.phone,
+    address: row.address,
+    bkashNumber: row.bkash_number,
+    bkashTxnId: row.bkash_txn_id,
+    items: row.items,
+    subtotal: row.subtotal,
+    deliveryCharge: row.delivery_charge,
+    total: row.total,
+    status: row.status
+  });
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      // Most likely: not logged in as admin, so RLS is blocking reads.
+      // This is expected on the public storefront - orders simply stay empty there.
+      console.log('Orders fetch skipped (not authenticated or no rows):', error.message);
+      setOrders([]);
+    } else {
+      setOrders(data.map(mapRowToOrder));
+    }
+    setOrdersLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    // Refetch whenever auth state changes (e.g. admin logs in/out)
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      fetchOrders();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Routing navigation helper
   const setView = (view, params = null) => {
@@ -92,7 +106,7 @@ export const ShopContextProvider = ({ children }) => {
       const existingItemIndex = prevCart.findIndex(
         (item) => item.product.id === product.id && item.size === size
       );
-      
+
       if (existingItemIndex > -1) {
         const newCart = [...prevCart];
         newCart[existingItemIndex].quantity += quantity;
@@ -157,44 +171,59 @@ export const ShopContextProvider = ({ children }) => {
     });
   };
 
-  // Place order
-  const placeOrder = (customerDetails) => {
+  // Place order - now writes to Supabase instead of local state/localStorage
+  const placeOrder = async (customerDetails) => {
     const orderId = `GW-${Math.floor(10000 + Math.random() * 90000)}`;
     const subtotal = getCartTotal();
     const deliveryCharge = 150; // Standard delivery charge in BDT
     const total = subtotal + deliveryCharge;
-    
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const newOrder = {
+    const newOrderRow = {
       id: orderId,
-      date: dateStr,
-      customerName: customerDetails.name,
+      customer_name: customerDetails.name,
       phone: customerDetails.phone,
       address: customerDetails.address,
-      bkashNumber: customerDetails.bkashNumber,
-      bkashTxnId: customerDetails.bkashTxnId,
-      items: [...cart],
+      bkash_number: customerDetails.bkashNumber,
+      bkash_txn_id: customerDetails.bkashTxnId,
+      items: cart,
       subtotal,
-      deliveryCharge,
+      delivery_charge: deliveryCharge,
       total,
-      status: "Pending verification"
+      status: 'Pending verification'
     };
 
-    setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    const { error } = await supabase.from('orders').insert(newOrderRow);
+
+    if (error) {
+      console.error('Failed to place order:', error.message);
+      alert('Something went wrong placing your order. Please try again.');
+      return null;
+    }
+
     clearCart();
     setView('confirmation', { orderId });
     return orderId;
   };
 
-  // Admin Verification Panel operations
-  const updateOrderStatus = (orderId, newStatus) => {
+  // Admin Verification Panel operations - now updates Supabase
+  const updateOrderStatus = async (orderId, newStatus) => {
+    // Optimistically update local state so the UI feels instant
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
         order.id === orderId ? { ...order, status: newStatus } : order
       )
     );
+
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Failed to update order status:', error.message);
+      // Roll back by refetching the real data from the server
+      fetchOrders();
+    }
   };
 
   return (
@@ -206,6 +235,8 @@ export const ShopContextProvider = ({ children }) => {
         cart,
         wishlist,
         orders,
+        ordersLoading,
+        refetchOrders: fetchOrders,
         customReviews,
         addToCart,
         removeFromCart,
