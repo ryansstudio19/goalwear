@@ -1,46 +1,56 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { ShopContext } from '../context/ShopContext';
+import { supabase } from '../supabaseClient';
 import { Lock, FileText, CheckCircle, XCircle, ShieldCheck, Truck, ShoppingBag, Eye } from 'lucide-react';
 
-// ⚠️ IMPORTANT: this is still a CLIENT-SIDE password check.
-// It stops casual visitors from *seeing* the panel in the UI,
-// but it does NOT stop someone technical from reading the order
-// data out of the page/network requests directly. If this data
-// is sensitive (customer names, phone numbers, bKash txn IDs),
-// the real fix is a backend login that only sends order data to
-// an authenticated session. See notes at the bottom of the chat reply.
-const ADMIN_PASSWORD = 'Ryan123#';
-const SESSION_KEY = 'goalwear_admin_session';
-
 export default function AdminPanel() {
-  const { orders, updateOrderStatus } = useContext(ShopContext);
+  const { orders, ordersLoading, updateOrderStatus, refetchOrders } = useContext(ShopContext);
   const [filter, setFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Default to LOCKED. Also check sessionStorage so a refresh
-  // doesn't force you to log in again mid-session (cleared when
-  // the browser tab is closed).
-  const [authenticated, setAuthenticated] = useState(
-    () => sessionStorage.getItem(SESSION_KEY) === 'true'
-  );
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState(false);
+  // Real auth state, backed by Supabase (server-side verified, not a frontend string match)
+  const [session, setSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  const handleLogin = (e) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  useEffect(() => {
+    // Check if already logged in (e.g. page refresh)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setCheckingSession(false);
+    });
+
+    // Keep session state in sync if it changes (login/logout/token refresh)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
-      setAuthenticated(true);
-      setLoginError(false);
+    setLoginError('');
+    setLoggingIn(true);
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setLoginError('Invalid email or password.');
     } else {
-      setLoginError(true);
+      setPassword('');
+      refetchOrders();
     }
-    setPassword('');
+    setLoggingIn(false);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY);
-    setAuthenticated(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSelectedOrder(null);
   };
 
   const getFilteredOrders = () => {
@@ -60,7 +70,16 @@ export default function AdminPanel() {
 
   const filtered = getFilteredOrders();
 
-  if (!authenticated) {
+  // Still checking whether there's an existing session - avoid flashing the login form
+  if (checkingSession) {
+    return (
+      <div className="container-custom" style={{ paddingTop: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session) {
     return (
       <div className="container-custom" style={{ paddingTop: '80px', paddingBottom: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '36px', textAlign: 'center', backgroundColor: '#0c0e15', border: '1px solid var(--border-glass-hover)' }}>
@@ -69,15 +88,15 @@ export default function AdminPanel() {
           </div>
           <h2 style={{ fontSize: '1.4rem', textTransform: 'uppercase', marginBottom: '8px' }}>Admin Workspace</h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            Access is locked. Enter your admin passcode to continue.
+            Access is locked. Sign in with your admin account to continue.
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <input
-              type="password"
-              placeholder="Enter passcode..."
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setLoginError(false); }}
+              type="email"
+              placeholder="Admin email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setLoginError(''); }}
               autoFocus
               style={{
                 width: '100%',
@@ -91,11 +110,28 @@ export default function AdminPanel() {
                 textAlign: 'center'
               }}
             />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setLoginError(''); }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '6px',
+                border: loginError ? '1px solid #ff3366' : '1px solid var(--border-glass)',
+                backgroundColor: 'var(--bg-tertiary)',
+                color: 'white',
+                fontSize: '0.9rem',
+                outline: 'none',
+                textAlign: 'center'
+              }}
+            />
             {loginError && (
-              <span style={{ color: '#ff3366', fontSize: '0.75rem' }}>Incorrect passcode. Try again.</span>
+              <span style={{ color: '#ff3366', fontSize: '0.75rem' }}>{loginError}</span>
             )}
-            <button type="submit" className="btn-premium btn-primary-glow" style={{ padding: '12px 0' }}>
-              Unlock Dashboard
+            <button type="submit" className="btn-premium btn-primary-glow" style={{ padding: '12px 0' }} disabled={loggingIn}>
+              {loggingIn ? 'Signing in...' : 'Unlock Dashboard'}
             </button>
           </form>
         </div>
@@ -117,7 +153,7 @@ export default function AdminPanel() {
         <div>
           <h1 className="section-title">Admin <span>Board</span></h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            GoalWear E-Commerce simulated merchant dispatch and payment verification center.
+            GoalWear E-Commerce merchant dispatch and payment verification center.
           </p>
         </div>
 
@@ -130,6 +166,12 @@ export default function AdminPanel() {
         </button>
       </div>
 
+      {ordersLoading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+          Loading orders...
+        </div>
+      ) : (
+      <>
       {/* Stats row */}
       <div style={{
         display: 'grid',
@@ -369,6 +411,8 @@ export default function AdminPanel() {
         </div>
 
       </div>
+      </>
+      )}
 
       <style>{`
         .table-row-hover:hover {
