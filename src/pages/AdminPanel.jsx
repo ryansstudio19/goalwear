@@ -2,22 +2,45 @@ import React, { useContext, useState } from 'react';
 import { ShopContext } from '../context/ShopContext';
 import { Lock, FileText, CheckCircle, XCircle, ShieldCheck, Truck, ShoppingBag, Eye } from 'lucide-react';
 
+// ⚠️ IMPORTANT: this is still a CLIENT-SIDE password check.
+// It stops casual visitors from *seeing* the panel in the UI,
+// but it does NOT stop someone technical from reading the order
+// data out of the page/network requests directly. If this data
+// is sensitive (customer names, phone numbers, bKash txn IDs),
+// the real fix is a backend login that only sends order data to
+// an authenticated session. See notes at the bottom of the chat reply.
+const ADMIN_PASSWORD = 'Ryan123#';
+const SESSION_KEY = 'goalwear_admin_session';
+
 export default function AdminPanel() {
   const { orders, updateOrderStatus } = useContext(ShopContext);
   const [filter, setFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Authenticate mockup (Simple unlock for demonstration)
-  const [authenticated, setAuthenticated] = useState(true);
+  // Default to LOCKED. Also check sessionStorage so a refresh
+  // doesn't force you to log in again mid-session (cleared when
+  // the browser tab is closed).
+  const [authenticated, setAuthenticated] = useState(
+    () => sessionStorage.getItem(SESSION_KEY) === 'true'
+  );
   const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState(false);
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === 'admin' || password === 'goalwear') {
+    if (password === ADMIN_PASSWORD) {
+      sessionStorage.setItem(SESSION_KEY, 'true');
       setAuthenticated(true);
+      setLoginError(false);
     } else {
-      alert("Invalid developer credentials! Tip: Use 'admin' or 'goalwear'.");
+      setLoginError(true);
     }
+    setPassword('');
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setAuthenticated(false);
   };
 
   const getFilteredOrders = () => {
@@ -41,25 +64,26 @@ export default function AdminPanel() {
     return (
       <div className="container-custom" style={{ paddingTop: '80px', paddingBottom: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '36px', textAlign: 'center', backgroundColor: '#0c0e15', border: '1px solid var(--border-glass-hover)' }}>
-          <div style={{ backgroundColor: 'rgba(0, 255, 136, 0.05)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'var(--accent)', margin: '0 auto 20px' }} className="icon-wrap">
+          <div style={{ backgroundColor: 'rgba(0, 255, 136, 0.05)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 20px' }} className="icon-wrap">
             <Lock size={26} />
           </div>
           <h2 style={{ fontSize: '1.4rem', textTransform: 'uppercase', marginBottom: '8px' }}>Admin Workspace</h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            Access is locked. Enter developer credentials to verify user bKash statements. (Tip: Use password <strong>admin</strong>)
+            Access is locked. Enter your admin passcode to continue.
           </p>
-          
+
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <input 
-              type="password" 
+            <input
+              type="password"
               placeholder="Enter passcode..."
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setLoginError(false); }}
+              autoFocus
               style={{
                 width: '100%',
                 padding: '12px',
                 borderRadius: '6px',
-                border: '1px solid var(--border-glass)',
+                border: loginError ? '1px solid #ff3366' : '1px solid var(--border-glass)',
                 backgroundColor: 'var(--bg-tertiary)',
                 color: 'white',
                 fontSize: '0.9rem',
@@ -67,6 +91,9 @@ export default function AdminPanel() {
                 textAlign: 'center'
               }}
             />
+            {loginError && (
+              <span style={{ color: '#ff3366', fontSize: '0.75rem' }}>Incorrect passcode. Try again.</span>
+            )}
             <button type="submit" className="btn-premium btn-primary-glow" style={{ padding: '12px 0' }}>
               Unlock Dashboard
             </button>
@@ -84,7 +111,7 @@ export default function AdminPanel() {
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>
-      
+
       {/* Title */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '40px' }}>
         <div>
@@ -94,8 +121,8 @@ export default function AdminPanel() {
           </p>
         </div>
 
-        <button 
-          onClick={() => setAuthenticated(false)}
+        <button
+          onClick={handleLogout}
           className="btn-premium btn-secondary-glass"
           style={{ padding: '8px 16px', fontSize: '0.8rem' }}
         >
@@ -127,10 +154,9 @@ export default function AdminPanel() {
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr',
-        xlTemplateColumns: '1.8fr 1.2fr',
         gap: '30px'
       }} className="admin-grid-layout">
-        
+
         {/* Orders Table */}
         <div className="glass-panel" style={{ padding: '24px', overflowX: 'auto' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '16px' }}>
@@ -178,8 +204,8 @@ export default function AdminPanel() {
                 </tr>
               ) : (
                 filtered.map((order) => (
-                  <tr 
-                    key={order.id} 
+                  <tr
+                    key={order.id}
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                     onClick={() => setSelectedOrder(order)}
                     className="table-row-hover"
@@ -198,16 +224,16 @@ export default function AdminPanel() {
                         fontSize: '0.7rem',
                         fontWeight: 800,
                         textTransform: 'uppercase',
-                        backgroundColor: order.status === 'Rejected' ? 'rgba(255,51,102,0.15)' : 
+                        backgroundColor: order.status === 'Rejected' ? 'rgba(255,51,102,0.15)' :
                                          order.status === 'Delivered' ? 'rgba(0,255,136,0.15)' : 'rgba(255,180,0,0.15)',
-                        color: order.status === 'Rejected' ? '#ff3366' : 
+                        color: order.status === 'Rejected' ? '#ff3366' :
                                order.status === 'Delivered' ? 'var(--accent)' : '#ffb400'
                       }}>
                         {order.status}
                       </span>
                     </td>
                     <td style={{ padding: '14px 8px', textAlign: 'right' }}>
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
                         className="btn-premium btn-secondary-glass"
                         style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem' }}
@@ -261,20 +287,20 @@ export default function AdminPanel() {
 
               {/* Action buttons controls */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                
+
                 {selectedOrder.status === 'Pending verification' && (
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
+                    <button
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'bKash Verified'); setSelectedOrder(prev => ({ ...prev, status: 'bKash Verified' })); }}
                       className="btn-premium btn-primary-glow"
-                      style={{ flex: 1, padding: '10px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyCenter: 'center', alignItems: 'center' }}
+                      style={{ flex: 1, padding: '10px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}
                     >
                       <ShieldCheck size={14} />
                       <span>Verify Paid</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'Rejected'); setSelectedOrder(prev => ({ ...prev, status: 'Rejected' })); }}
-                      style={{ flex: 1, padding: '10px 0', fontSize: '0.75rem', backgroundColor: '#ff3366', color: 'white', display: 'flex', gap: '6px', justifyCenter: 'center', alignItems: 'center' }}
+                      style={{ flex: 1, padding: '10px 0', fontSize: '0.75rem', backgroundColor: '#ff3366', color: 'white', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}
                       className="btn-premium"
                     >
                       <XCircle size={14} />
@@ -284,7 +310,7 @@ export default function AdminPanel() {
                 )}
 
                 {selectedOrder.status === 'bKash Verified' && (
-                  <button 
+                  <button
                     onClick={() => { updateOrderStatus(selectedOrder.id, 'Processing'); setSelectedOrder(prev => ({ ...prev, status: 'Processing' })); }}
                     className="btn-premium btn-primary-glow"
                     style={{ padding: '10px 0', fontSize: '0.75rem' }}
@@ -295,10 +321,10 @@ export default function AdminPanel() {
                 )}
 
                 {(selectedOrder.status === 'Processing' || selectedOrder.status === 'bKash Verified') && (
-                  <button 
+                  <button
                     onClick={() => { updateOrderStatus(selectedOrder.id, 'Shipped'); setSelectedOrder(prev => ({ ...prev, status: 'Shipped' })); }}
                     className="btn-premium btn-primary-glow"
-                    style={{ padding: '12px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyCenter: 'center', alignItems: 'center' }}
+                    style={{ padding: '12px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}
                   >
                     <Truck size={14} />
                     <span>Dispatch Package (Mark Shipped)</span>
@@ -306,10 +332,10 @@ export default function AdminPanel() {
                 )}
 
                 {selectedOrder.status === 'Shipped' && (
-                  <button 
+                  <button
                     onClick={() => { updateOrderStatus(selectedOrder.id, 'Delivered'); setSelectedOrder(prev => ({ ...prev, status: 'Delivered' })); }}
                     className="btn-premium btn-primary-glow"
-                    style={{ padding: '12px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyCenter: 'center', alignItems: 'center' }}
+                    style={{ padding: '12px 0', fontSize: '0.75rem', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}
                   >
                     <CheckCircle size={14} />
                     <span>Complete Handover (Mark Delivered)</span>
