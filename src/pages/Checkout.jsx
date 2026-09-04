@@ -1,9 +1,11 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { ShopContext } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import { Smartphone, ShieldAlert, CheckCircle2, User, MapPin, Phone } from 'lucide-react';
 
 export default function Checkout() {
   const { placeOrder, getCartTotal } = useContext(ShopContext);
+  const { user, profile } = useAuth();
 
   // Form states
   const [name, setName] = useState('');
@@ -11,6 +13,16 @@ export default function Checkout() {
   const [phone, setPhone] = useState('');
   const [bkashNumber, setBkashNumber] = useState('');
   const [bkashTxnId, setBkashTxnId] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      if (profile.full_name && !name) setName(profile.full_name);
+      if (profile.phone && !phone) {
+        setPhone(profile.phone);
+        if (!bkashNumber) setBkashNumber(profile.phone);
+      }
+    }
+  }, [profile]);
 
   const subtotal = getCartTotal();
   const deliveryFee = 120;
@@ -36,6 +48,7 @@ export default function Checkout() {
 
     // Call placeOrder which records details, empties cart, and redirects to confirmation
     placeOrder({
+      customerId: user?.id || null,
       name,
       address,
       phone,

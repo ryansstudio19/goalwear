@@ -3,17 +3,17 @@ import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
-import JerseyViewer3D from '../components/JerseyViewer3D';
-import { Shield, Sparkles, Truck, RefreshCw, ChevronRight, HelpCircle } from 'lucide-react';
+import { Shield, Sparkles, Truck, RefreshCw, ChevronRight, HelpCircle, CheckCircle2, Award } from 'lucide-react';
 
 export default function Home() {
-  const { setView } = useContext(ShopContext);
+  const { setView, products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   // Filter products
-  const featuredJersey = products[0]; // Argentina
-  const newArrivals = products.filter(p => p.isNew).slice(0, 4);
-  const bestSellers = products.filter(p => p.isBestSeller).slice(0, 4);
+  const featuredJersey = allProducts[0]; // Argentina
+  const newArrivals = allProducts.filter(p => p.isNew).slice(0, 4);
+  const bestSellers = allProducts.filter(p => p.isBestSeller).slice(0, 4);
 
   const [activeFaq, setActiveFaq] = useState(null);
   const faqs = [
@@ -82,7 +82,7 @@ export default function Home() {
               lineHeight: 1.7,
               maxWidth: '540px'
             }}>
-              Custom crafted, ultra-premium football jerseys engineered for elite athletes and die-hard supporters. Rotate, zoom, and inspect our threads in 3D sandbox mode before ordering.
+              Custom crafted, ultra-premium football jerseys engineered for elite athletes and die-hard supporters. Official player edition weaves, verified silicone badges, and fast nationwide delivery.
             </p>
             
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '10px' }}>
@@ -95,33 +95,55 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Hero Right: Floating Interactive 3D Showcase */}
+          {/* Hero Right: Featured Match Jersey Spotlight */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             <div 
               className="glass-panel animate-float"
               style={{
                 width: '100%',
                 maxWidth: '440px',
-                border: '1px solid var(--border-glass)',
+                border: '1px solid var(--border-glass-hover)',
                 borderRadius: '24px',
-                padding: '12px',
+                padding: '16px',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                backgroundColor: 'rgba(10, 12, 18, 0.7)'
+                backgroundColor: 'rgba(10, 12, 18, 0.85)'
               }}
             >
-              <JerseyViewer3D design={featuredJersey.design} />
+              <div style={{ position: 'relative', height: '360px', borderRadius: '16px', overflow: 'hidden', backgroundColor: 'var(--bg-tertiary)' }}>
+                <img 
+                  src={featuredJersey.image} 
+                  alt={featuredJersey.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '12px',
+                  left: '12px',
+                  backgroundColor: 'rgba(0,0,0,0.75)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  border: '1px solid var(--accent)',
+                  color: 'var(--accent)',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase'
+                }}>
+                  Player Issue
+                </div>
+              </div>
               
-              <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)' }}>
+              <div style={{ padding: '16px 8px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>{featuredJersey.name}</h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>3D Sandbox Viewer</p>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', margin: 0 }}>{featuredJersey.name}</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, margin: '4px 0 0' }}>৳{featuredJersey.price}</p>
                 </div>
                 <button 
                   onClick={() => setView('product-details', { productId: featuredJersey.id })}
                   className="btn-premium btn-primary-glow" 
-                  style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '0.75rem' }}
+                  style={{ padding: '10px 20px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800 }}
                 >
-                  Buy Now
+                  Order Now
                 </button>
               </div>
             </div>
@@ -138,9 +160,9 @@ export default function Home() {
         }}>
           {[
             { icon: <Shield size={32} color="var(--accent)" />, title: "Premium Fabric", desc: "100% breathable jacquard weave" },
-            { icon: <Truck size={32} color="var(--accent)" />, title: "Fast Shipping", desc: "COD across BD, 150 BDT prepay" },
+            { icon: <Truck size={32} color="var(--accent)" />, title: "Fast Shipping", desc: "COD across BD, 120 BDT advance" },
             { icon: <RefreshCw size={32} color="var(--accent)" />, title: "7-Day Exchange", desc: "Hassle-free size replacement" },
-            { icon: <Sparkles size={32} color="var(--accent)" />, title: "3D Sandbox View", desc: "Inspect detailed mesh textures" }
+            { icon: <Award size={32} color="var(--accent)" />, title: "Authentic Badges", desc: "Heat-applied official federation crests" }
           ].map((item, idx) => (
             <div key={idx} className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div>{item.icon}</div>
@@ -235,46 +257,59 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Dynamic 3D Interaction Teaser Board */}
+      {/* Craftsmanship & Operational Guarantee Spotlight */}
       <section className="container-custom">
         <div 
-          className="glass-panel sandbox-teaser-grid"
+          className="glass-panel"
           style={{
             padding: '50px',
             display: 'grid',
             gridTemplateColumns: '1fr',
-            lgTemplateColumns: '1fr 1fr',
+            lgTemplateColumns: '1.2fr 1fr',
             gap: '40px',
             alignItems: 'center',
-            background: 'linear-gradient(135deg, rgba(15,16,22,0.9), rgba(0,255,136,0.03))',
-            border: '1px solid var(--border-glass-hover)'
+            background: 'linear-gradient(135deg, rgba(15,16,22,0.95), rgba(0,255,136,0.04))',
+            border: '1px solid var(--border-glass-hover)',
+            borderRadius: '20px'
           }}
         >
           <div>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '20px' }}>
-              PRO-LEVEL <span style={{ color: 'var(--accent)' }}>3D VIEWPORT</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--accent)', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '12px' }}>
+              <Shield size={16} />
+              <span>Standard of Excellence</span>
+            </div>
+            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 16px 0', lineHeight: 1.1 }}>
+              AUTHENTIC MATCH-GRADE <span style={{ color: 'var(--accent)' }}>CRAFTSMANSHIP</span>
             </h2>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '28px' }}>
-              Take full control of the jersey showcase sandbox. Zoom right in to examine the collar embroidery, rotate a full 360-degrees, and swap between front and back views to inspect heat-applied squad numbers. Try the simulation controls directly on our product detail interface.
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 24px 0', fontSize: '0.95rem' }}>
+              Every jersey in the GoalWear catalog is tailored to official player standards. We partner directly with certified jersey manufacturers to guarantee thermo-bonded silicone federation crests, laser-cut ventilation zones, and micro-jacquard weaves that hold up both on the pitch and in the stands.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
               {[
-                "Drag to rotate jersey on any axis",
-                "Scroll or click +/- to zoom",
-                "Verify front/back print coordinates"
+                "100% Breathable Aeroready Micro-mesh",
+                "Official Heat-Applied Crest & Sponsor Fonts",
+                "bKash Verified Advance Delivery Protection",
+                "24-48 Hour Dhaka Express Dispatch"
               ].map((text, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--accent)', borderRadius: '50%' }} />
-                  <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{text}</span>
+                  <CheckCircle2 size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'white' }}>{text}</span>
                 </div>
               ))}
             </div>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', maxWidth: '400px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
-              {/* Load a Manchester City jersey in demo */}
-              <JerseyViewer3D design={products[3].design} />
+            <div style={{ width: '100%', maxWidth: '420px', padding: '16px', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+              <img 
+                src={products[3].image} 
+                alt="Man City Match Edition" 
+                style={{ width: '100%', height: '320px', objectFit: 'cover', borderRadius: '10px' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>{products[3].name}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>৳{products[3].price}</span>
+              </div>
             </div>
           </div>
         </div>

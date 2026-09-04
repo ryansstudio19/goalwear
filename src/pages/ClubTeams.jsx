@@ -6,8 +6,10 @@ import QuickViewModal from '../components/QuickViewModal';
 import { Shield } from 'lucide-react';
 
 export default function ClubTeams() {
+  const { products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const clubKits = products.filter(p => p.category === "Club Teams");
+  const clubKits = allProducts.filter(p => p.category === "Club Teams");
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>

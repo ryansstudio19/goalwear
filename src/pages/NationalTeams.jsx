@@ -6,8 +6,10 @@ import QuickViewModal from '../components/QuickViewModal';
 import { Globe } from 'lucide-react';
 
 export default function NationalTeams() {
+  const { products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const nationalKits = products.filter(p => p.category === "National Teams");
+  const nationalKits = allProducts.filter(p => p.category === "National Teams");
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>

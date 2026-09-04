@@ -33,7 +33,7 @@ export const products = [
     },
     reviews: [
       { id: 1, user: "Sakib A.", rating: 5, comment: "Amazing quality, the gold details look absolutely premium!", date: "2026-05-15" },
-      { id: 2, user: "Tanvir H.", rating: 5, comment: "Fits perfectly. The 3D viewer on this site is spot on to the actual product.", date: "2026-05-20" }
+      { id: 2, user: "Tanvir H.", rating: 5, comment: "Fits perfectly. The high-resolution photos match the actual product exactly.", date: "2026-05-20" }
     ]
   },
   {

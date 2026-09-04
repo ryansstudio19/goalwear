@@ -6,11 +6,12 @@ import QuickViewModal from '../components/QuickViewModal';
 import { Heart, Trash2 } from 'lucide-react';
 
 export default function Wishlist() {
-  const { wishlist, toggleWishlist, setView } = useContext(ShopContext);
+  const { wishlist, toggleWishlist, setView, products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   // Map product IDs to product objects
-  const wishlistedProducts = products.filter(p => wishlist.includes(p.id));
+  const wishlistedProducts = allProducts.filter(p => wishlist.includes(p.id));
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
 import { Sparkles } from 'lucide-react';
 
 export default function NewArrivals() {
+  const { products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const newKits = products.filter(p => p.isNew);
+  const newKits = allProducts.filter(p => p.isNew);
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>

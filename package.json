@@ -4,17 +4,19 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
-  "@supabase/supabase-js": "^2.45.4",
-  "lucide-react": "^0.312.0",
-  "react": "^18.2.0",
-  "react-dom": "^18.2.0",
-  "three": "^0.160.0"
-},
+    "@supabase/supabase-js": "^2.45.4",
+    "firebase": "^12.18.0",
+    "lucide-react": "^0.312.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.18.3",
+    "three": "^0.160.0"
+  },
   "devDependencies": {
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",

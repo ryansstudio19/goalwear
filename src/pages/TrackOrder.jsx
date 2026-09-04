@@ -1,29 +1,41 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { Search, Package, CheckCircle2, Truck, Check, AlertTriangle } from 'lucide-react';
 
 export default function TrackOrder() {
   const { orders, viewParams } = useContext(ShopContext);
+  const [searchParams] = useSearchParams();
   const [orderId, setOrderId] = useState('');
   const [searchedOrder, setSearchedOrder] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Sync param redirect from Order Confirmation page
+  // Sync param redirect from URL (?id=...) or Order Confirmation page
   useEffect(() => {
-    if (viewParams && viewParams.orderId) {
-      setOrderId(viewParams.orderId);
-      const match = orders.find(o => o.id === viewParams.orderId);
+    const queryId = searchParams.get('id') || searchParams.get('orderId');
+    const targetId = queryId || viewParams?.orderId;
+    if (targetId) {
+      setOrderId(targetId);
+      const cleanTarget = targetId.trim().toUpperCase();
+      const match = orders.find(o => 
+        (o.id && o.id.trim().toUpperCase() === cleanTarget) ||
+        (o.orderNumber && o.orderNumber.trim().toUpperCase() === cleanTarget)
+      );
       if (match) {
         setSearchedOrder(match);
         setHasSearched(true);
       }
     }
-  }, [viewParams, orders]);
+  }, [searchParams, viewParams, orders]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setHasSearched(true);
-    const match = orders.find(o => o.id.trim().toUpperCase() === orderId.trim().toUpperCase());
+    const cleanTarget = orderId.trim().toUpperCase();
+    const match = orders.find(o => 
+      (o.id && o.id.trim().toUpperCase() === cleanTarget) ||
+      (o.orderNumber && o.orderNumber.trim().toUpperCase() === cleanTarget)
+    );
     if (match) {
       setSearchedOrder(match);
     } else {
@@ -35,12 +47,27 @@ export default function TrackOrder() {
   // 1: Placed, 2: Paid/Verified, 3: Processing, 4: Shipped, 5: Delivered
   const getStageIndex = (status) => {
     switch (status) {
-      case 'Pending verification': return 1;
-      case 'bKash Verified': return 2;
-      case 'Processing': return 3;
-      case 'Shipped': return 4;
-      case 'Delivered': return 5;
-      case 'Rejected': return -1;
+      case 'Pending verification':
+      case 'PENDING':
+        return 1;
+      case 'bKash Verified':
+      case 'CONFIRMED':
+        return 2;
+      case 'Processing':
+      case 'PACKED':
+      case 'PROCESSING':
+        return 3;
+      case 'Shipped':
+      case 'SHIPPED':
+      case 'OUT_FOR_DELIVERY':
+        return 4;
+      case 'Delivered':
+      case 'DELIVERED':
+        return 5;
+      case 'Rejected':
+      case 'CANCELLED':
+      case 'REFUNDED':
+        return -1;
       default: return 1;
     }
   };

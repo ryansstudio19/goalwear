@@ -1,32 +1,37 @@
 import React, { useContext, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
-import { Heart, ShoppingBag, Menu, X, Search, Activity } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Heart, ShoppingBag, Menu, X, Search, Activity, ShieldCheck, User } from 'lucide-react';
 
 export default function Navbar() {
-  const { currentView, setView, getCartCount, wishlist } = useContext(ShopContext);
+  const { currentView, setView, getCartCount, wishlist, isAdminLoggedIn } = useContext(ShopContext);
+  const { user, profile } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const navLinks = [
-    { label: 'Home', view: 'home' },
-    { label: 'Shop', view: 'shop' },
-    { label: 'National Teams', view: 'national' },
-    { label: 'Club Teams', view: 'club' },
-    { label: 'New Arrivals', view: 'new-arrivals' },
-    { label: 'Size Guide', view: 'sizeguide' },
-    { label: 'Track Order', view: 'track' },
+    { label: 'Home', path: '/', view: 'home' },
+    { label: 'Shop', path: '/shop', view: 'shop' },
+    { label: 'National Teams', path: '/national-teams', view: 'national' },
+    { label: 'Club Teams', path: '/club-teams', view: 'club' },
+    { label: 'New Arrivals', path: '/new-arrivals', view: 'new-arrivals' },
+    { label: 'Size Guide', path: '/size-guide', view: 'sizeguide' },
+    { label: 'Track Order', path: '/track-order', view: 'track' },
   ];
 
-  const handleNavClick = (view) => {
-    setView(view);
+  const handleNavClick = (path, view) => {
+    navigate(path);
     setMobileMenuOpen(false);
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      setView('shop', { search: searchQuery });
+      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
       setSearchQuery('');
     }
@@ -51,7 +56,7 @@ export default function Navbar() {
       }}>
         {/* Brand Logo */}
         <div 
-          onClick={() => setView('home')} 
+          onClick={() => navigate('/')} 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -71,58 +76,87 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <nav style={{ display: 'none' }} className="desktop-nav-styles">
           <ul style={{ display: 'flex', gap: '32px', listStyle: 'none' }}>
-            {navLinks.map((link) => (
-              <li key={link.view}>
-                <button
-                  onClick={() => handleNavClick(link.view)}
-                  style={{
-                    color: currentView === link.view ? 'var(--accent)' : 'var(--text-primary)',
-                    fontFamily: 'var(--font-headings)',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.05em',
-                    position: 'relative',
-                    paddingBottom: '4px',
-                    transition: 'var(--transition-fast)'
-                  }}
-                  className="nav-link-hover"
-                >
-                  {link.label}
-                  {currentView === link.view && (
-                    <span style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '2px',
-                      backgroundColor: 'var(--accent)',
-                      boxShadow: '0 0 8px var(--accent)'
-                    }} />
-                  )}
-                </button>
-              </li>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
+              return (
+                <li key={link.view}>
+                  <button
+                    onClick={() => handleNavClick(link.path, link.view)}
+                    style={{
+                      color: isActive ? 'var(--accent)' : 'var(--text-primary)',
+                      fontFamily: 'var(--font-headings)',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      fontSize: '0.85rem',
+                      letterSpacing: '0.05em',
+                      position: 'relative',
+                      paddingBottom: '4px',
+                      transition: 'var(--transition-fast)'
+                    }}
+                    className="nav-link-hover"
+                  >
+                    {link.label}
+                    {isActive && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '2px',
+                        backgroundColor: 'var(--accent)',
+                        boxShadow: '0 0 8px var(--accent)'
+                      }} />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
         {/* Icons Area */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Search Toggle */}
           <button 
             onClick={() => setSearchOpen(!searchOpen)} 
             style={{ color: 'var(--text-primary)', transition: 'var(--transition-fast)' }}
             hover-color="var(--accent)"
+            title="Search Products"
           >
             <Search size={22} />
           </button>
 
+          {/* Customer Account */}
+          <button
+            onClick={() => navigate('/account')}
+            style={{ 
+              position: 'relative', 
+              color: location.pathname.startsWith('/account') ? 'var(--accent)' : 'var(--text-primary)',
+              transition: 'var(--transition-fast)'
+            }}
+            title={user ? `Account (${profile?.full_name || user.email})` : 'Sign In / Account'}
+          >
+            <User size={22} />
+            {user && (
+              <span style={{
+                position: 'absolute',
+                bottom: '-2px',
+                right: '-2px',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent)',
+                boxShadow: '0 0 6px var(--accent)'
+              }} />
+            )}
+          </button>
+
           {/* Wishlist */}
           <button 
-            onClick={() => setView('wishlist')} 
+            onClick={() => navigate('/wishlist')} 
             style={{ position: 'relative', color: 'var(--text-primary)' }}
           >
-            <Heart size={22} fill={currentView === 'wishlist' ? 'var(--accent)' : 'none'} color={currentView === 'wishlist' ? 'var(--accent)' : 'currentColor'} />
+            <Heart size={22} fill={location.pathname === '/wishlist' ? 'var(--accent)' : 'none'} color={location.pathname === '/wishlist' ? 'var(--accent)' : 'currentColor'} />
             {wishlist.length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -147,10 +181,10 @@ export default function Navbar() {
 
           {/* Cart */}
           <button 
-            onClick={() => setView('cart')} 
+            onClick={() => navigate('/cart')} 
             style={{ position: 'relative', color: 'var(--text-primary)' }}
           >
-            <ShoppingBag size={22} color={currentView === 'cart' ? 'var(--accent)' : 'currentColor'} />
+            <ShoppingBag size={22} color={location.pathname === '/cart' ? 'var(--accent)' : 'currentColor'} />
             {getCartCount() > 0 && (
               <span style={{
                 position: 'absolute',
@@ -241,25 +275,28 @@ export default function Navbar() {
           overflowY: 'auto'
         }}>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '20px', listStyle: 'none' }}>
-            {navLinks.map((link) => (
-              <li key={link.view} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
-                <button
-                  onClick={() => handleNavClick(link.view)}
-                  style={{
-                    color: currentView === link.view ? 'var(--accent)' : 'var(--text-primary)',
-                    fontFamily: 'var(--font-headings)',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    fontSize: '1.2rem',
-                    textAlign: 'left',
-                    width: '100%',
-                    display: 'block'
-                  }}
-                >
-                  {link.label}
-                </button>
-              </li>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path));
+              return (
+                <li key={link.view} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
+                  <button
+                    onClick={() => handleNavClick(link.path, link.view)}
+                    style={{
+                      color: isActive ? 'var(--accent)' : 'var(--text-primary)',
+                      fontFamily: 'var(--font-headings)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      fontSize: '1.2rem',
+                      textAlign: 'left',
+                      width: '100%',
+                      display: 'block'
+                    }}
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

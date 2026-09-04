@@ -1,10 +1,13 @@
 import React, { useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { CheckCircle, Truck, Clipboard, Calendar, FileText } from 'lucide-react';
 
 export default function Confirmation() {
-  const { viewParams, setView } = useContext(ShopContext);
-  const orderId = viewParams?.orderId || "GW-XXXXX";
+  const { viewParams } = useContext(ShopContext);
+  const { orderId: routeOrderId } = useParams();
+  const navigate = useNavigate();
+  const orderId = routeOrderId || viewParams?.orderId || "GW-XXXXX";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(orderId);
@@ -115,7 +118,7 @@ export default function Confirmation() {
         {/* CTAs */}
         <div style={{ display: 'flex', gap: '14px', width: '100%', flexWrap: 'wrap', marginTop: '10px' }} className="cta-flex">
           <button 
-            onClick={() => setView('track', { orderId })}
+            onClick={() => navigate(`/track-order?id=${encodeURIComponent(orderId)}`)}
             className="btn-premium btn-primary-glow"
             style={{ flex: 1, padding: '12px 0', minWidth: '180px' }}
           >
@@ -123,7 +126,7 @@ export default function Confirmation() {
             <span>Track Order Milestones</span>
           </button>
           <button 
-            onClick={() => setView('shop')}
+            onClick={() => navigate('/shop')}
             className="btn-premium btn-secondary-glass"
             style={{ flex: 1, padding: '12px 0', minWidth: '180px' }}
           >

@@ -1,37 +1,62 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
-import JerseyViewer3D from '../components/JerseyViewer3D';
 import ReviewsSection from '../components/ReviewsSection';
 import ProductCard from '../components/ProductCard';
-import { Heart, ShoppingBag, Star, Info, ListFilter, ClipboardCheck } from 'lucide-react';
+import { Heart, ShoppingBag, Star, Info, ListFilter, ClipboardCheck, ArrowLeft, Check, ZoomIn } from 'lucide-react';
 
 export default function ProductDetails() {
-  const { viewParams, wishlist, toggleWishlist, addToCart, setView } = useContext(ShopContext);
+  const { viewParams, wishlist, toggleWishlist, addToCart, setView, products: catalogProducts } = useContext(ShopContext);
+  const { productId: routeProductId } = useParams();
+  const navigate = useNavigate();
+
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('specs');
+  const [addedSuccess, setAddedSuccess] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   
-  const productId = viewParams?.productId || products[0].id;
-  const product = products.find(p => p.id === productId) || products[0];
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
+  const productId = routeProductId || viewParams?.productId || allProducts[0].id;
+  const product = allProducts.find(p => p.id === productId) || allProducts[0];
+
+  const galleryImages = [
+    product.image,
+    'https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80'
+  ];
 
   const isWishlisted = wishlist.includes(product.id);
-  const isOutOfStock = product.sizes.length === 0;
+  const isOutOfStock = product.inStock === false || product.stockStatus === 'out_of_stock' || product.stockCount === 0 || !product.sizes || product.sizes.length === 0;
+  const isLowStock = !isOutOfStock && (product.stockStatus === 'low_stock' || (product.stockCount > 0 && product.stockCount <= 5));
 
   // Reset page states when moving to another product details page
   useEffect(() => {
     setSelectedSize('');
     setQuantity(1);
     setActiveTab('specs');
+    setAddedSuccess(false);
+    setActiveImageIndex(0);
   }, [productId]);
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      alert("Please select a size first!");
+      alert("Please select a size first (S, M, L, XL, XXL)!");
       return;
     }
     addToCart(product, selectedSize, quantity);
-    alert(`Added ${quantity} x ${product.name} (Size: ${selectedSize}) to your cart!`);
+    setAddedSuccess(true);
+    setTimeout(() => setAddedSuccess(false), 4000);
+  };
+
+  const handleBuyNow = () => {
+    if (!selectedSize) {
+      alert("Please select a size first (S, M, L, XL, XXL)!");
+      return;
+    }
+    addToCart(product, selectedSize, quantity);
+    navigate('/checkout');
   };
 
   const handleWishlistToggle = () => {
@@ -39,13 +64,78 @@ export default function ProductDetails() {
   };
 
   // Get related products (same category, excluding current product)
-  const related = products
+  const related = allProducts
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 3);
 
   return (
-    <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>
+    <div className="container-custom" style={{ paddingTop: '30px', paddingBottom: '80px' }}>
       
+      {/* Breadcrumb Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>Home</button>
+        <span>/</span>
+        <button onClick={() => navigate('/shop')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>Shop</button>
+        <span>/</span>
+        <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{product.name}</span>
+      </div>
+
+      {/* Added to Cart Success Toast */}
+      {addedSuccess && (
+        <div style={{
+          backgroundColor: 'rgba(0, 255, 136, 0.1)',
+          border: '1px solid var(--accent)',
+          borderRadius: '10px',
+          padding: '14px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          animation: 'fade-in 0.3s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Check size={18} color="var(--accent)" />
+            <span style={{ fontSize: '0.9rem', color: 'white', fontWeight: 600 }}>
+              Added <strong>{quantity} x {product.name} (Size: {selectedSize})</strong> to your bag!
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => navigate('/cart')}
+              style={{
+                backgroundColor: 'var(--accent)',
+                color: '#000000',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              View Cart
+            </button>
+            <button
+              onClick={() => navigate('/checkout')}
+              style={{
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              Checkout Now
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Details block */}
       <div style={{
         display: 'grid',
@@ -55,22 +145,91 @@ export default function ProductDetails() {
         marginBottom: '60px'
       }} className="details-grid-layouts">
         
-        {/* Left Column: 3D Viewport Sandbox */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="glass-panel" style={{ padding: '16px', position: 'relative', border: '1px solid var(--border-glass-hover)', backgroundColor: 'rgba(10,12,18,0.7)', boxShadow: 'var(--shadow-glass)' }}>
-            <JerseyViewer3D design={product.design} />
+        {/* Left Column: High-Resolution Photography Gallery */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div 
+            className="glass-panel" 
+            style={{ 
+              padding: '12px', 
+              position: 'relative', 
+              border: '1px solid var(--border-glass-hover)', 
+              backgroundColor: 'rgba(10,12,18,0.7)', 
+              boxShadow: 'var(--shadow-glass)',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'relative', width: '100%', height: '440px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', overflow: 'hidden' }}>
+              <img 
+                src={galleryImages[activeImageIndex] || product.image} 
+                alt={`${product.name} View ${activeImageIndex + 1}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  transition: 'transform 0.4s ease'
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                right: '14px',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(6px)',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <ZoomIn size={14} />
+                <span>High Resolution</span>
+              </div>
+            </div>
+
+            {/* Thumbnail Strip */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {galleryImages.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImageIndex(idx)}
+                  style={{
+                    width: '74px',
+                    height: '74px',
+                    borderRadius: '6px',
+                    border: '2px solid',
+                    borderColor: activeImageIndex === idx ? 'var(--accent)' : 'transparent',
+                    overflow: 'hidden',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    opacity: activeImageIndex === idx ? 1 : 0.6,
+                    transition: 'all 0.2s ease',
+                    flexShrink: 0
+                  }}
+                >
+                  <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </button>
+              ))}
+            </div>
           </div>
 
           <div style={{
             backgroundColor: 'rgba(255,255,255,0.02)',
             border: '1px solid var(--border-glass)',
             borderRadius: '10px',
-            padding: '16px',
-            fontSize: '0.8rem',
+            padding: '14px 18px',
+            fontSize: '0.82rem',
             lineHeight: 1.6,
-            color: 'var(--text-secondary)'
+            color: 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
           }}>
-            <strong>Interactive 3D instructions:</strong> Hold left mouse click (or drag with single finger on mobile) and rotate the model to inspect print coordinates. Press Front or Back buttons below the canvas to snap view directions.
+            <span style={{ color: 'var(--accent)', fontWeight: 800 }}>✓ Official Quality:</span>
+            <span>Micro-mesh aeroready weave, silicone badge crest, verified match edition tailoring.</span>
           </div>
         </div>
 
@@ -103,16 +262,77 @@ export default function ProductDetails() {
             </div>
           </div>
 
-          {/* Pricing */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white' }}>
-              {product.price} BDT
-            </span>
-            {product.originalPrice > product.price && (
-              <span style={{ fontSize: '1.25rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
-                {product.originalPrice} BDT
+          {/* Pricing & Stock Indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+              <span style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white' }}>
+                {product.price} BDT
               </span>
-            )}
+              {product.originalPrice > product.price && (
+                <span style={{ fontSize: '1.25rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                  {product.originalPrice} BDT
+                </span>
+              )}
+            </div>
+
+            {/* Live Stock Badge */}
+            <div>
+              {isOutOfStock ? (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                  Sold Out / Out of Stock
+                </span>
+              ) : isLowStock ? (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  color: '#f59e0b',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                  Low Stock • Only Few Left
+                </span>
+              ) : (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#10b981',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  In Stock • Dispatching 24h
+                </span>
+              )}
+            </div>
           </div>
 
           <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -126,8 +346,8 @@ export default function ProductDetails() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', color: 'white' }}>Select Size:</span>
               <button 
-                onClick={() => setView('sizeguide')}
-                style={{ fontSize: '0.8rem', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}
+                onClick={() => navigate('/size-guide')}
+                style={{ fontSize: '0.8rem', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'underline', background: 'none', border: 'none' }}
               >
                 <Info size={12} />
                 <span>Size Guide Calculator</span>
@@ -193,12 +413,49 @@ export default function ProductDetails() {
             {/* Cart Button */}
             <button 
               onClick={handleAddToCart}
-              className="btn-premium btn-primary-glow"
-              style={{ flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              disabled={isOutOfStock}
+              className={`btn-premium ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'btn-primary-glow'}`}
+              style={{
+                flex: '1 1 180px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                backgroundColor: isOutOfStock ? 'rgba(255,255,255,0.05)' : undefined,
+                color: isOutOfStock ? 'var(--text-muted)' : undefined,
+                borderColor: isOutOfStock ? 'rgba(255,255,255,0.1)' : undefined
+              }}
             >
               <ShoppingBag size={18} />
-              <span>Add to Cart</span>
+              <span>{isOutOfStock ? 'CURRENTLY OUT OF STOCK' : 'Add to Cart'}</span>
             </button>
+
+            {/* Buy Now Button */}
+            {!isOutOfStock && (
+              <button 
+                onClick={handleBuyNow}
+                style={{
+                  flex: '1 1 140px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  fontWeight: 800,
+                  fontSize: '0.88rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)',
+                  boxShadow: '0 4px 15px rgba(255,255,255,0.2)'
+                }}
+              >
+                <span>Buy Now</span>
+              </button>
+            )}
 
             {/* Wishlist Icon */}
             <button 
@@ -231,7 +488,7 @@ export default function ProductDetails() {
             lineHeight: 1.6,
             color: 'var(--text-secondary)'
           }}>
-            <strong>Direct Payment Heuristics:</strong> GoalWear operates via Cash On Delivery. To protect shipment logistics against false orders, the delivery charge of <strong>150 BDT</strong> must be pre-paid via bKash. You will enter the TxnID during the billing process.
+            <strong>Direct Payment Heuristics:</strong> GoalWear operates via Cash On Delivery. To protect shipment logistics against false orders, the delivery charge of <strong>120 BDT</strong> must be pre-paid via bKash. You will enter the TxnID during the billing process.
           </div>
 
         </div>

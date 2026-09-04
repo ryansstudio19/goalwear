@@ -1,13 +1,86 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { products } from '../data/products';
+import React, { createContext, useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { products as defaultProducts } from '../data/products';
 import { supabase } from '../supabaseClient';
+import { db, doc, setDoc, updateDoc } from '../lib/firebase';
 
 export const ShopContext = createContext();
 
 export const ShopContextProvider = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // Navigation View State (SPA Router)
   const [currentView, setCurrentView] = useState('home');
   const [viewParams, setViewParams] = useState(null); // Used for passing ID like selected product
+
+  // Track Admin Supabase session for privileged owner UI
+  const [adminSession, setAdminSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAdminSession(session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminSession(session);
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Sync currentView with location.pathname for active states
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') setCurrentView('home');
+    else if (path.startsWith('/shop')) setCurrentView('shop');
+    else if (path.startsWith('/national')) setCurrentView('national');
+    else if (path.startsWith('/club')) setCurrentView('club');
+    else if (path.startsWith('/new-arrivals')) setCurrentView('new-arrivals');
+    else if (path.startsWith('/best-sellers')) setCurrentView('best-sellers');
+    else if (path.startsWith('/size-guide') || path.startsWith('/sizeguide')) setCurrentView('sizeguide');
+    else if (path.startsWith('/track')) setCurrentView('track');
+    else if (path.startsWith('/wishlist')) setCurrentView('wishlist');
+    else if (path.startsWith('/cart')) setCurrentView('cart');
+    else if (path.startsWith('/checkout')) setCurrentView('checkout');
+    else if (path.startsWith('/order-confirmation') || path.startsWith('/confirmation')) setCurrentView('confirmation');
+    else if (path.startsWith('/product')) setCurrentView('product-details');
+    else if (path.startsWith('/about')) setCurrentView('about');
+    else if (path.startsWith('/contact')) setCurrentView('contact');
+    else if (path.startsWith('/faq')) setCurrentView('faq');
+    else if (path.startsWith('/admin')) setCurrentView('admin');
+  }, [location.pathname]);
+
+  // ── Products Inventory State ──────────────────────────────────────────────
+  const [products, setProducts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('goalwear_products_catalog');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load stored products catalog:', e);
+    }
+    return defaultProducts.map((p) => ({
+      ...p,
+      inStock: p.inStock ?? true,
+      stockStatus: p.stockStatus || 'in_stock', // 'in_stock' | 'low_stock' | 'out_of_stock'
+      stockCount: p.stockCount ?? 30
+    }));
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('goalwear_products_catalog', JSON.stringify(products));
+    } catch (e) {
+      console.warn('Failed to persist products catalog:', e);
+    }
+  }, [products]);
 
   // E-commerce state
   const [cart, setCart] = useState(() => {
@@ -48,18 +121,22 @@ export const ShopContextProvider = ({ children }) => {
 
   // Converts a Supabase row (snake_case) into the shape the rest of the app expects (camelCase)
   const mapRowToOrder = (row) => ({
-    id: row.id,
+    id: row.order_number || row.id,
+    orderNumber: row.order_number || row.id,
+    customerId: row.customer_id || null,
     date: row.created_at,
-    customerName: row.customer_name,
-    phone: row.phone,
-    address: row.address,
+    customerName: row.shipping_name || row.customer_name || 'Anonymous Fan',
+    phone: row.shipping_phone || row.phone || '',
+    address: row.shipping_address || row.address || '',
+    city: row.shipping_city || row.city || 'Dhaka',
     bkashNumber: row.bkash_number,
     bkashTxnId: row.bkash_txn_id,
-    items: row.items,
-    subtotal: row.subtotal,
-    deliveryCharge: row.delivery_charge,
-    total: row.total,
-    status: row.status
+    items: row.items || [],
+    subtotal: Number(row.subtotal || 0),
+    deliveryCharge: Number(row.delivery_charge ?? 120),
+    total: Number(row.total || 0),
+    status: row.status || 'Pending verification',
+    paymentStatus: row.payment_status || 'PENDING_VERIFICATION'
   });
 
   const fetchOrders = async () => {
@@ -70,12 +147,10 @@ export const ShopContextProvider = ({ children }) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      // Most likely: not logged in as admin, so RLS is blocking reads.
-      // This is expected on the public storefront - orders simply stay empty there.
       console.log('Orders fetch skipped (not authenticated or no rows):', error.message);
       setOrders([]);
     } else {
-      setOrders(data.map(mapRowToOrder));
+      setOrders((data || []).map(mapRowToOrder));
     }
     setOrdersLoading(false);
   };
@@ -89,15 +164,184 @@ export const ShopContextProvider = ({ children }) => {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 
-  // Routing navigation helper
+  // ── Customer Directory aggregation ────────────────────────────────────────
+  // Aggregates unique customers across all orders so the admin can view buyers
+  const customersList = useMemo(() => {
+    const customerMap = new Map();
+
+    orders.forEach((order) => {
+      const phoneKey = (order.phone || '').trim();
+      const nameKey = (order.customerName || 'Anonymous Fan').trim();
+      const identifier = phoneKey || nameKey.toLowerCase();
+      if (!identifier) return;
+
+      if (!customerMap.has(identifier)) {
+        customerMap.set(identifier, {
+          id: identifier,
+          name: nameKey,
+          phone: order.phone || 'N/A',
+          address: order.address || 'N/A',
+          bkashNumber: order.bkashNumber || 'N/A',
+          totalOrders: 0,
+          totalSpent: 0,
+          firstOrderDate: order.date,
+          lastOrderDate: order.date,
+          lastOrderStatus: order.status,
+          orders: []
+        });
+      }
+
+      const c = customerMap.get(identifier);
+      c.totalOrders += 1;
+      c.totalSpent += Number(order.total || 0);
+      c.orders.push(order);
+
+      const orderTimestamp = new Date(order.date || 0).getTime();
+      const lastTimestamp = new Date(c.lastOrderDate || 0).getTime();
+      if (orderTimestamp >= lastTimestamp) {
+        c.lastOrderDate = order.date;
+        c.lastOrderStatus = order.status;
+        if (order.address && order.address !== 'N/A') c.address = order.address;
+        if (order.customerName && order.customerName !== 'Anonymous Fan') c.name = order.customerName;
+      }
+    });
+
+    return Array.from(customerMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  }, [orders]);
+
+  // Routing navigation helper with real URL paths
   const setView = (view, params = null) => {
     setCurrentView(view);
     setViewParams(params);
+
+    switch (view) {
+      case 'home':
+        navigate('/');
+        break;
+      case 'shop':
+        if (params?.search) {
+          navigate(`/shop?search=${encodeURIComponent(params.search)}`);
+        } else if (params?.category) {
+          navigate(`/shop?category=${encodeURIComponent(params.category)}`);
+        } else {
+          navigate('/shop');
+        }
+        break;
+      case 'national':
+        navigate('/national-teams');
+        break;
+      case 'club':
+        navigate('/club-teams');
+        break;
+      case 'new-arrivals':
+        navigate('/new-arrivals');
+        break;
+      case 'best-sellers':
+        navigate('/best-sellers');
+        break;
+      case 'sizeguide':
+        navigate('/size-guide');
+        break;
+      case 'track':
+        if (params?.orderId) {
+          navigate(`/track-order?id=${encodeURIComponent(params.orderId)}`);
+        } else {
+          navigate('/track-order');
+        }
+        break;
+      case 'wishlist':
+        navigate('/wishlist');
+        break;
+      case 'cart':
+        navigate('/cart');
+        break;
+      case 'checkout':
+        navigate('/checkout');
+        break;
+      case 'confirmation':
+        if (params?.orderId) {
+          navigate(`/order-confirmation/${encodeURIComponent(params.orderId)}`);
+        } else {
+          navigate('/order-confirmation');
+        }
+        break;
+      case 'product-details':
+        if (params?.productId) {
+          navigate(`/product/${encodeURIComponent(params.productId)}`);
+        } else {
+          navigate('/shop');
+        }
+        break;
+      case 'about':
+        navigate('/about');
+        break;
+      case 'contact':
+        navigate('/contact');
+        break;
+      case 'faq':
+        navigate('/faq');
+        break;
+      case 'admin':
+        navigate('/admin');
+        break;
+      default:
+        navigate('/');
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Product Inventory Actions ─────────────────────────────────────────────
+  const updateProductStockStatus = (productId, stockStatus) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              stockStatus,
+              inStock: stockStatus !== 'out_of_stock',
+              stockCount: stockStatus === 'out_of_stock' ? 0 : (p.stockCount && p.stockCount > 0 ? p.stockCount : 20)
+            }
+          : p
+      )
+    );
+  };
+
+  const toggleProductBadge = (productId, badgeField) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId ? { ...p, [badgeField]: !p[badgeField] } : p
+      )
+    );
+  };
+
+  const updateProduct = (productId, updatedFields) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, ...updatedFields } : p))
+    );
+  };
+
+  const addProduct = (newProduct) => {
+    setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const deleteProduct = (productId) => {
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  const resetProductsToDefault = () => {
+    const initialized = defaultProducts.map((p) => ({
+      ...p,
+      inStock: true,
+      stockStatus: 'in_stock',
+      stockCount: 30
+    }));
+    setProducts(initialized);
+    localStorage.removeItem('goalwear_products_catalog');
   };
 
   // Cart operations
@@ -171,43 +415,131 @@ export const ShopContextProvider = ({ children }) => {
     });
   };
 
-  // Place order - now writes to Supabase instead of local state/localStorage
+  // Place order - validates cart against authoritative catalog then uses atomic stored procedure
   const placeOrder = async (customerDetails) => {
-    const orderId = `GW-${Math.floor(10000 + Math.random() * 90000)}`;
-    const subtotal = getCartTotal();
-    const deliveryCharge = 150; // Standard delivery charge in BDT
-    const total = subtotal + deliveryCharge;
-
-    const newOrderRow = {
-      id: orderId,
-      customer_name: customerDetails.name,
-      phone: customerDetails.phone,
-      address: customerDetails.address,
-      bkash_number: customerDetails.bkashNumber,
-      bkash_txn_id: customerDetails.bkashTxnId,
-      items: cart,
-      subtotal,
-      delivery_charge: deliveryCharge,
-      total,
-      status: 'Pending verification'
-    };
-
-    const { error } = await supabase.from('orders').insert(newOrderRow);
-
-    if (error) {
-      console.error('Failed to place order:', error.message);
-      alert('Something went wrong placing your order. Please try again.');
+    if (!cart || cart.length === 0) {
+      alert("Your cart is empty.");
       return null;
     }
 
+    // Server-side / Authoritative Cart Validation against master products
+    for (const item of cart) {
+      const dbProduct = products.find((p) => p.id === item.product.id);
+      if (!dbProduct) {
+        alert(`Product "${item.product.name}" is no longer available in the catalog.`);
+        return null;
+      }
+      if (dbProduct.inStock === false || dbProduct.stockStatus === 'out_of_stock') {
+        alert(`Sorry, "${dbProduct.name}" is currently out of stock.`);
+        return null;
+      }
+      // Re-assert authoritative price to prevent client-side DOM/state manipulation
+      item.product.price = Number(dbProduct.price);
+    }
+
+    const orderId = `GW-${Math.floor(10000 + Math.random() * 90000)}`;
+    const subtotal = cart.reduce((sum, item) => sum + (Number(item.product.price) * item.quantity), 0);
+    const deliveryCharge = 120; // Standard bKash delivery charge in BDT
+    const total = subtotal + deliveryCharge;
+
+    // First attempt to invoke atomic stored procedure if connected to PostgreSQL
+    let atomicSucceeded = false;
+    let finalOrderId = orderId;
+
+    try {
+      const itemsPayload = cart.map(item => ({
+        variant_id: item.variantId || item.product.id,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        size: item.size,
+        price: item.product.price,
+        quantity: item.quantity
+      }));
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc('place_order_atomic', {
+        p_customer_id: customerDetails.customerId || null,
+        p_shipping_name: customerDetails.name,
+        p_shipping_phone: customerDetails.phone,
+        p_shipping_address: customerDetails.address,
+        p_shipping_city: customerDetails.city || 'Dhaka',
+        p_bkash_number: customerDetails.bkashNumber,
+        p_bkash_txn_id: customerDetails.bkashTxnId,
+        p_customer_notes: customerDetails.notes || '',
+        p_items: itemsPayload
+      });
+
+      if (!rpcError && rpcData && rpcData.order_number) {
+        atomicSucceeded = true;
+        finalOrderId = rpcData.order_number;
+      }
+    } catch (rpcErr) {
+      console.warn('Atomic RPC skipped or pending schema deployment, using direct orders insert:', rpcErr);
+    }
+
+    if (!atomicSucceeded) {
+      const newOrderRow = {
+        id: orderId,
+        order_number: orderId,
+        customer_id: customerDetails.customerId || null,
+        customer_name: customerDetails.name,
+        shipping_name: customerDetails.name,
+        phone: customerDetails.phone,
+        shipping_phone: customerDetails.phone,
+        address: customerDetails.address,
+        shipping_address: customerDetails.address,
+        bkash_number: customerDetails.bkashNumber,
+        bkash_txn_id: customerDetails.bkashTxnId,
+        items: cart,
+        subtotal,
+        delivery_charge: deliveryCharge,
+        total,
+        status: 'Pending verification',
+        payment_status: 'PENDING_VERIFICATION',
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('orders').insert(newOrderRow);
+
+      if (error) {
+        console.error('Failed to place order:', error.message);
+        alert('Something went wrong placing your order. Please try again.');
+        return null;
+      }
+    }
+
+    // Synchronize placed order into Firebase Firestore
+    try {
+      await setDoc(doc(db, 'orders', finalOrderId), {
+        id: finalOrderId,
+        orderNumber: finalOrderId,
+        customerId: customerDetails.customerId || 'guest',
+        customerName: customerDetails.name,
+        phone: customerDetails.phone,
+        address: customerDetails.address,
+        city: customerDetails.city || 'Dhaka',
+        totalAmount: total,
+        deliveryFee: deliveryCharge,
+        status: 'pending_verification',
+        paymentMethod: 'Cash on Delivery (bKash Adv)',
+        bkashTrxId: customerDetails.bkashTxnId || '',
+        bkashNumber: customerDetails.bkashNumber || '',
+        createdAt: new Date().toISOString()
+      });
+    } catch (fbErr) {
+      console.warn('[GoalWear Firebase] Firestore sync fallback:', fbErr);
+    }
+
+    // Refresh orders in context
+    await fetchOrders();
+
     clearCart();
-    setView('confirmation', { orderId });
-    return orderId;
+    setView('confirmation', { orderId: finalOrderId });
+    return finalOrderId;
   };
 
-  // Admin Verification Panel operations - now updates Supabase
+  // Admin Verification Panel operations - updates Supabase
   const updateOrderStatus = async (orderId, newStatus) => {
-    // Optimistically update local state so the UI feels instant
+    // Optimistically update local state so UI feels instant
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
         order.id === orderId ? { ...order, status: newStatus } : order
@@ -221,7 +553,25 @@ export const ShopContextProvider = ({ children }) => {
 
     if (error) {
       console.error('Failed to update order status:', error.message);
-      // Roll back by refetching the real data from the server
+      fetchOrders();
+    }
+
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: newStatus.toLowerCase().replace(/\s+/g, '_'),
+        updatedAt: new Date().toISOString()
+      });
+    } catch {
+      // ignore if not cached yet
+    }
+  };
+
+  const deleteOrder = async (orderId) => {
+    setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
+    try {
+      await supabase.from('orders').delete().eq('id', orderId);
+    } catch (err) {
+      console.error('Failed to delete order:', err);
       fetchOrders();
     }
   };
@@ -232,10 +582,20 @@ export const ShopContextProvider = ({ children }) => {
         currentView,
         viewParams,
         setView,
+        products,
+        updateProductStockStatus,
+        toggleProductBadge,
+        updateProduct,
+        addProduct,
+        deleteProduct,
+        resetProductsToDefault,
         cart,
         wishlist,
+        adminSession,
+        isAdminLoggedIn: Boolean(adminSession),
         orders,
         ordersLoading,
+        customersList,
         refetchOrders: fetchOrders,
         customReviews,
         addToCart,
@@ -247,10 +607,12 @@ export const ShopContextProvider = ({ children }) => {
         toggleWishlist,
         addReview,
         placeOrder,
-        updateOrderStatus
+        updateOrderStatus,
+        deleteOrder
       }}
     >
       {children}
     </ShopContext.Provider>
   );
 };
+

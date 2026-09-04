@@ -31,7 +31,7 @@ export default function Cart() {
           <ShoppingBag size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
           <h3 style={{ fontSize: '1.2rem', textTransform: 'uppercase', marginBottom: '8px' }}>Your Cart is Empty</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
-            No shirts in your squad bag. Visit the catalog to customize your size and explore kits in 3D sandbox.
+            No shirts in your squad bag. Visit the catalog to customize your size and explore authentic match edition kits.
           </p>
           <button onClick={() => setView('shop')} className="btn-premium btn-primary-glow" style={{ padding: '12px 28px' }}>
             Browse Jerseys

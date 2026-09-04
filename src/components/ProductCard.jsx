@@ -6,7 +6,11 @@ export default function ProductCard({ product, onQuickView }) {
   const { wishlist, toggleWishlist, addToCart, setView } = useContext(ShopContext);
   
   const isWishlisted = wishlist.includes(product.id);
-  const discountPercent = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const discountPercent = product.originalPrice && product.originalPrice > product.price
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
+  const isOutOfStock = product.inStock === false || product.stockStatus === 'out_of_stock' || product.stockCount === 0;
+  const isLowStock = !isOutOfStock && (product.stockStatus === 'low_stock' || (product.stockCount > 0 && product.stockCount <= 5));
 
   const handleWishlistClick = (e) => {
     e.stopPropagation();
@@ -42,7 +46,34 @@ export default function ProductCard({ product, onQuickView }) {
         gap: '6px',
         zIndex: 5
       }}>
-        {product.isNew && (
+        {isOutOfStock ? (
+          <span style={{
+            background: '#e53e3e',
+            color: '#ffffff',
+            fontSize: '0.65rem',
+            fontWeight: 800,
+            padding: '3px 8px',
+            borderRadius: '4px',
+            textTransform: 'uppercase',
+            boxShadow: '0 0 10px rgba(229, 62, 62, 0.4)'
+          }}>
+            Sold Out
+          </span>
+        ) : isLowStock ? (
+          <span style={{
+            background: '#dd6b20',
+            color: '#ffffff',
+            fontSize: '0.65rem',
+            fontWeight: 800,
+            padding: '3px 8px',
+            borderRadius: '4px',
+            textTransform: 'uppercase',
+            boxShadow: '0 0 10px rgba(221, 107, 32, 0.4)'
+          }}>
+            Low Stock
+          </span>
+        ) : null}
+        {product.isNew && !isOutOfStock && (
           <span style={{
             background: 'var(--accent)',
             color: '#000000',

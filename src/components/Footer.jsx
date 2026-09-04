@@ -1,9 +1,11 @@
 import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { Mail, Phone, MapPin, Lock, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
-  const { setView } = useContext(ShopContext);
+  const { isAdminLoggedIn } = useContext(ShopContext);
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -47,12 +49,12 @@ export default function Footer() {
               GOAL<span style={{ color: 'var(--accent)' }}>WEAR</span>
             </h3>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '20px' }}>
-              GoalWear is a premium sports apparel brand crafting high-quality, international standard football jerseys. Experience stadium atmosphere design and interactive custom visualizers.
+              GoalWear is Bangladesh's premier sports apparel destination crafting high-grade authentic and fan version football jerseys with custom player typography and nationwide delivery.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Phone size={14} color="var(--accent)" />
-                <span>+880 1848-520875</span>
+                <span>+880 1848-520875 (WhatsApp Support)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={14} color="var(--accent)" />
@@ -60,7 +62,7 @@ export default function Footer() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MapPin size={14} color="var(--accent)" />
-                <span>NO AVAILABLE SHOWROOM AT THIS MOMENT!</span>
+                <span>Dhaka, Bangladesh &bull; Nationwide Courier Dispatch</span>
               </div>
             </div>
           </div>
@@ -71,11 +73,12 @@ export default function Footer() {
               Categories
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
-              <li><button onClick={() => setView('shop')} className="footer-link">All Jerseys</button></li>
-              <li><button onClick={() => setView('national')} className="footer-link">National Team Kits</button></li>
-              <li><button onClick={() => setView('club')} className="footer-link">Club League Shirts</button></li>
-              <li><button onClick={() => setView('new-arrivals')} className="footer-link">New Season Arrivals</button></li>
-              <li><button onClick={() => setView('sizeguide')} className="footer-link">Size Calculator</button></li>
+              <li><button onClick={() => navigate('/shop')} className="footer-link">All Jerseys</button></li>
+              <li><button onClick={() => navigate('/national-teams')} className="footer-link">National Team Kits</button></li>
+              <li><button onClick={() => navigate('/club-teams')} className="footer-link">Club League Shirts</button></li>
+              <li><button onClick={() => navigate('/new-arrivals')} className="footer-link">New Season Arrivals</button></li>
+              <li><button onClick={() => navigate('/best-sellers')} className="footer-link">Best Sellers</button></li>
+              <li><button onClick={() => navigate('/size-guide')} className="footer-link">Size Calculator</button></li>
             </ul>
           </div>
 
@@ -85,11 +88,11 @@ export default function Footer() {
               Customer Support
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
-              <li><button onClick={() => setView('track')} className="footer-link">Track Order Status</button></li>
-              <li><button onClick={() => setView('faq')} className="footer-link">Frequently Asked Questions</button></li>
-              <li><button onClick={() => setView('about')} className="footer-link">Our Brand Story</button></li>
-              <li><button onClick={() => setView('contact')} className="footer-link">Contact Us</button></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("Returns Policy:\nWe offer exchanges within 7 days of delivery. The item must be unused, in its original packing, and have all tags attached."); }} className="footer-link">Return & Refund Policy</a></li>
+              <li><button onClick={() => navigate('/track-order')} className="footer-link">Track Order Status</button></li>
+              <li><button onClick={() => navigate('/faq')} className="footer-link">Frequently Asked Questions</button></li>
+              <li><button onClick={() => navigate('/about')} className="footer-link">Our Brand Story</button></li>
+              <li><button onClick={() => navigate('/contact')} className="footer-link">Contact Us</button></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("Returns Policy:\nWe offer exchanges within 7 days of delivery for any manufacturing defect or sizing mismatch. The jersey must be unused with original tags attached."); }} className="footer-link">Return & Refund Policy</a></li>
             </ul>
           </div>
 
@@ -99,7 +102,7 @@ export default function Footer() {
               Join the Squad
             </h4>
             <p style={{ fontSize: '0.85rem', marginBottom: '15px' }}>
-              Subscribe to get exclusive alerts on hot kit drops and limited edition releases.
+              Subscribe to get exclusive alerts on hot kit drops and limited edition retro releases.
             </p>
             <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input
@@ -143,7 +146,7 @@ export default function Footer() {
               <ShieldCheck size={20} color="var(--accent)" />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', textTransform: 'uppercase' }}>Secure Checkout</span>
-                <span style={{ fontSize: '0.65rem' }}>Cash On Delivery + bKash delivery fee</span>
+                <span style={{ fontSize: '0.65rem' }}>Cash On Delivery + bKash 120 Tk delivery fee</span>
               </div>
             </div>
           </div>
@@ -166,24 +169,8 @@ export default function Footer() {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Developer Security:\nSSL Encrypted payment portals simulated locally. No real payments are processed.")}>Privacy Policy</span>
-            <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Merchant Terms:\nCustom football jerseys replica quality. Delivery fee is non-refundable once order is shipped.")}>Terms of Service</span>
-            {/* Subtle Admin Panel Trigger */}
-            <button 
-              onClick={() => setView('admin')} 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '5px', 
-                opacity: 0.4, 
-                transition: 'opacity 0.2s' 
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = 0.4}
-            >
-              <Lock size={12} />
-              <span>Admin Workspace</span>
-            </button>
+            <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Privacy Policy:\nYour contact number and delivery address are strictly used for order fulfillment and courier tracking.")}>Privacy Policy</span>
+            <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Merchant Terms:\nOfficial fan and player issue jersey apparel. Advance delivery charge confirms cash-on-delivery parcel shipping.")}>Terms of Service</span>
           </div>
         </div>
       </div>

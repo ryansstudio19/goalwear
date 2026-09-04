@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
 import { Flame } from 'lucide-react';
 
 export default function BestSellers() {
+  const { products: catalogProducts } = useContext(ShopContext);
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const bestKits = products.filter(p => p.isBestSeller);
+  const bestKits = allProducts.filter(p => p.isBestSeller);
 
   return (
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px' }}>

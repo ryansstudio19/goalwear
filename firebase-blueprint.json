@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered customer or admin profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "fullName": { "type": "string", "maxLength": 100, "description": "Full name" },
+        "phone": { "type": "string", "maxLength": 20, "description": "Contact phone number" },
+        "role": { "type": "string", "enum": ["customer", "admin"], "description": "User role" },
+        "createdAt": { "type": "string", "description": "Creation ISO timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer jersey order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Order ID e.g. GW-XXXXX" },
+        "orderNumber": { "type": "string", "description": "Human readable order number" },
+        "customerId": { "type": "string", "description": "Customer UID or guest ID" },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "address": { "type": "string", "maxLength": 300 },
+        "city": { "type": "string", "maxLength": 100 },
+        "totalAmount": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending_verification", "confirmed", "processing", "shipped", "delivered", "cancelled"] },
+        "paymentMethod": { "type": "string" },
+        "bkashTrxId": { "type": "string", "maxLength": 50 },
+        "bkashNumber": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "phone", "address", "totalAmount", "status"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Store football jersey catalog item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string" },
+        "edition": { "type": "string" },
+        "price": { "type": "number" },
+        "inStock": { "type": "boolean" },
+        "stockStatus": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "inStock"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Customer user profile documents"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Store customer orders"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalog of available football jerseys"
+    }
+  }
+}

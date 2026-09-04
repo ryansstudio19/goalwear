@@ -1,7 +1,9 @@
 import React, { useContext, useEffect } from 'react';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { ShopContext } from './context/ShopContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { ShieldCheck, ArrowRight } from 'lucide-react';
 
 // Pages
 import Home from './pages/Home';
@@ -21,58 +23,50 @@ import Checkout from './pages/Checkout';
 import Confirmation from './pages/Confirmation';
 import ProductDetails from './pages/ProductDetails';
 import AdminPanel from './pages/AdminPanel';
+import AccountAuth from './pages/AccountAuth';
+import CustomerOrders from './pages/CustomerOrders';
 
-export default function App() {
-  const { currentView } = useContext(ShopContext);
-
-  // Trigger smooth scroll on route switch
+// ScrollToTop on path or search param change
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView]);
+  }, [pathname, search]);
+  return null;
+}
 
-  const renderPage = () => {
-    switch (currentView) {
-      case 'home':
-        return <Home />;
-      case 'shop':
-        return <Shop />;
-      case 'national':
-        return <NationalTeams />;
-      case 'club':
-        return <ClubTeams />;
-      case 'new-arrivals':
-        return <NewArrivals />;
-      case 'best-sellers':
-        return <BestSellers />;
-      case 'sizeguide':
-        return <SizeGuide />;
-      case 'track':
-        return <TrackOrder />;
-      case 'about':
-        return <AboutUs />;
-      case 'contact':
-        return <Contact />;
-      case 'faq':
-        return <FAQ />;
-      case 'wishlist':
-        return <Wishlist />;
-      case 'cart':
-        return <Cart />;
-      case 'checkout':
-        return <Checkout />;
-      case 'confirmation':
-        return <Confirmation />;
-      case 'product-details':
-        return <ProductDetails />;
-      case 'admin':
-        return <AdminPanel />;
-      default:
-        return <Home />;
+export default function App() {
+  const { isAdminLoggedIn } = useContext(ShopContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Hash route fallback redirection (e.g. #/shop -> /shop)
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+      const target = window.location.hash.slice(1);
+      navigate(target, { replace: true });
     }
-  };
+  }, [navigate]);
+
+  // Secret Owner Access Shortcut: Ctrl + Shift + A (or Cmd + Shift + A)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        navigate('/admin');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative' }}>
+      {/* Scroll restoration */}
+      <ScrollToTop />
+
       {/* Stadium Ambient Lights */}
       <div className="stadium-glow-container">
         <div className="spotlight spotlight-1"></div>
@@ -80,16 +74,54 @@ export default function App() {
         <div className="spotlight spotlight-3"></div>
       </div>
       
-      {/* Navigation */}
-      <Navbar />
+      {/* Navigation: Customer store navbar only rendered outside the admin workspace */}
+      {!isAdminRoute && <Navbar />}
       
       {/* Main Pages Router wrapper */}
-      <div style={{ flex: 1, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
-        {renderPage()}
-      </div>
+      <main style={{ flex: 1, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/national-teams" element={<NationalTeams />} />
+          <Route path="/national" element={<Navigate to="/national-teams" replace />} />
+          <Route path="/club-teams" element={<ClubTeams />} />
+          <Route path="/club" element={<Navigate to="/club-teams" replace />} />
+          <Route path="/new-arrivals" element={<NewArrivals />} />
+          <Route path="/best-sellers" element={<BestSellers />} />
+          <Route path="/size-guide" element={<SizeGuide />} />
+          <Route path="/sizeguide" element={<Navigate to="/size-guide" replace />} />
+          <Route path="/track-order" element={<TrackOrder />} />
+          <Route path="/track" element={<Navigate to="/track-order" replace />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-confirmation" element={<Confirmation />} />
+          <Route path="/order-confirmation/:orderId" element={<Confirmation />} />
+          <Route path="/confirmation" element={<Navigate to="/order-confirmation" replace />} />
+          <Route path="/confirmation/:orderId" element={<Confirmation />} />
+          <Route path="/product/:productId" element={<ProductDetails />} />
+          <Route path="/product-details" element={<ProductDetails />} />
+          <Route path="/product-details/:productId" element={<ProductDetails />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<FAQ />} />
+          
+          {/* Customer Account & Order History */}
+          <Route path="/account" element={<AccountAuth />} />
+          <Route path="/account/login" element={<AccountAuth />} />
+          <Route path="/account/orders" element={<CustomerOrders />} />
+          <Route path="/orders" element={<Navigate to="/account/orders" replace />} />
+          
+          {/* Dedicated Admin Portal - Protected by Supabase Auth */}
+          <Route path="/admin" element={<AdminPanel />} />
+          
+          {/* Fallback to Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
       
-      {/* Footer */}
-      <Footer />
+      {/* Footer: Customer store footer only rendered outside the admin workspace */}
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }

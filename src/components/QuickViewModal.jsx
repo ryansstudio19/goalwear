@@ -9,7 +9,11 @@ export default function QuickViewModal({ product, onClose }) {
 
   if (!product) return null;
 
+  const isOutOfStock = product.inStock === false || product.stockStatus === 'out_of_stock' || product.stockCount === 0 || !product.sizes || product.sizes.length === 0;
+  const isLowStock = !isOutOfStock && (product.stockStatus === 'low_stock' || (product.stockCount > 0 && product.stockCount <= 5));
+
   const handleAddToCart = () => {
+    if (isOutOfStock) return;
     if (!selectedSize) {
       alert("Please select a size first!");
       return;
@@ -110,13 +114,54 @@ export default function QuickViewModal({ product, onClose }) {
             </h2>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>
-              {product.price} BDT
-            </span>
-            {product.originalPrice > product.price && (
-              <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
-                {product.originalPrice} BDT
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>
+                {product.price} BDT
+              </span>
+              {product.originalPrice > product.price && (
+                <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                  {product.originalPrice} BDT
+                </span>
+              )}
+            </div>
+
+            {isOutOfStock ? (
+              <span style={{
+                background: '#e53e3e',
+                color: '#ffffff',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '4px 10px',
+                borderRadius: '4px',
+                textTransform: 'uppercase'
+              }}>
+                Sold Out
+              </span>
+            ) : isLowStock ? (
+              <span style={{
+                background: '#dd6b20',
+                color: '#ffffff',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '4px 10px',
+                borderRadius: '4px',
+                textTransform: 'uppercase'
+              }}>
+                Low Stock
+              </span>
+            ) : (
+              <span style={{
+                background: 'rgba(0, 255, 136, 0.15)',
+                color: 'var(--accent)',
+                border: '1px solid var(--accent)',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '4px 10px',
+                borderRadius: '4px',
+                textTransform: 'uppercase'
+              }}>
+                In Stock
               </span>
             )}
           </div>
@@ -175,19 +220,22 @@ export default function QuickViewModal({ product, onClose }) {
           <div style={{ marginTop: 'auto' }}>
             <button
               onClick={handleAddToCart}
-              disabled={added}
-              className="btn-premium btn-primary-glow"
+              disabled={added || isOutOfStock}
+              className={`btn-premium ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'btn-primary-glow'}`}
               style={{
                 width: '100%',
                 padding: '14px 0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px'
+                gap: '10px',
+                backgroundColor: isOutOfStock ? 'rgba(255,255,255,0.05)' : undefined,
+                color: isOutOfStock ? 'var(--text-muted)' : undefined,
+                borderColor: isOutOfStock ? 'rgba(255,255,255,0.1)' : undefined
               }}
             >
               <ShoppingBag size={18} />
-              <span>{added ? 'ADDED TO SQUAD!' : 'ADD TO CART'}</span>
+              <span>{isOutOfStock ? 'CURRENTLY OUT OF STOCK' : (added ? 'ADDED TO SQUAD!' : 'ADD TO CART')}</span>
             </button>
           </div>
         </div>

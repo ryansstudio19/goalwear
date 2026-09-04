@@ -1,0 +1,8 @@
+{
+  "name": "GoalWear",
+  "description": "GoalWear is a professional e-commerce platform for authentic football jerseys, national kits, and club editions with real-time order tracking, bKash verification, and secure inventory management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

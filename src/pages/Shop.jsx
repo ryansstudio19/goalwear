@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
@@ -6,7 +7,9 @@ import QuickViewModal from '../components/QuickViewModal';
 import { Search, Filter, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 
 export default function Shop() {
-  const { viewParams } = useContext(ShopContext);
+  const { viewParams, products: catalogProducts } = useContext(ShopContext);
+  const [searchParams] = useSearchParams();
+  const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,17 +20,23 @@ export default function Shop() {
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Sync params from global navbar searches or category redirects
+  // Sync params from URL query params or global context
   useEffect(() => {
-    if (viewParams) {
-      if (viewParams.search) {
-        setSearchTerm(viewParams.search);
-      }
-      if (viewParams.category) {
-        setSelectedCategories([viewParams.category]);
-      }
+    const qSearch = searchParams.get('search');
+    const qCategory = searchParams.get('category');
+
+    if (qSearch !== null) {
+      setSearchTerm(qSearch);
+    } else if (viewParams?.search) {
+      setSearchTerm(viewParams.search);
     }
-  }, [viewParams]);
+
+    if (qCategory) {
+      setSelectedCategories([qCategory]);
+    } else if (viewParams?.category) {
+      setSelectedCategories([viewParams.category]);
+    }
+  }, [searchParams, viewParams]);
 
   // Handle category checkboxes
   const handleCategoryChange = (category) => {
@@ -48,7 +57,7 @@ export default function Shop() {
   };
 
   // Filtered and Sorted list
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = allProducts.filter(product => {
     // 1. Search filter
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
