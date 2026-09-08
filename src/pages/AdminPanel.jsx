@@ -1870,7 +1870,7 @@ function AddProductModal({ onClose, onAdd }) {
 
   const presetImages = [
     { label: 'Real Madrid White', url: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&q=80&w=800' },
-    { label: 'Barcelona Blaugrana', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=800' },
+    { label: 'Barcelona Blaugrana', url: 'https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&q=80&w=800' },
     { label: 'Argentina Sky Blue', url: 'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?auto=format&fit=crop&q=80&w=800' },
     { label: 'Brazil Canary Yellow', url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800' }
   ];

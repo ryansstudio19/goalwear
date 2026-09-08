@@ -35,12 +35,34 @@ export default function AboutUs() {
           </p>
         </div>
 
-        <div style={{ borderRadius: '16px', overflow: 'hidden', height: '320px', border: '1px solid var(--border-glass-hover)', boxShadow: 'var(--shadow-glass)' }}>
+        <div style={{ borderRadius: '16px', overflow: 'hidden', height: '340px', border: '1px solid var(--border-glass-hover)', boxShadow: 'var(--shadow-glass)', position: 'relative' }}>
           <img 
-            src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=800" 
-            alt="GoalWear factory texture detail"
+            src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=1200" 
+            alt="GoalWear matchday stadium and apparel design"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&q=80&w=1200';
+            }}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '16px 20px',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>
+              GoalWear Matchday Lab • Dhaka
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              100% Player Fit
+            </span>
+          </div>
         </div>
       </div>
 

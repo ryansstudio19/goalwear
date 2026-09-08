@@ -3,6 +3,9 @@ import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-
 import { ShopContext } from './context/ShopContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import SmoothScroll from './components/SmoothScroll';
+import TunnelPreloader from './components/TunnelPreloader';
+import MagneticCursor from './components/MagneticCursor';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
 
 // Pages
@@ -17,6 +20,7 @@ import TrackOrder from './pages/TrackOrder';
 import AboutUs from './pages/AboutUs';
 import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
+import ReturnPolicy from './pages/ReturnPolicy';
 import Wishlist from './pages/Wishlist';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
@@ -64,6 +68,15 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative' }}>
+      {/* Lenis Smooth Scroll Engine */}
+      <SmoothScroll />
+
+      {/* First-load Tunnel Walk Cinematic Preloader */}
+      <TunnelPreloader />
+
+      {/* Desktop Magnetic Aim Cursor */}
+      <MagneticCursor />
+
       {/* Scroll restoration */}
       <ScrollToTop />
 
@@ -105,6 +118,9 @@ export default function App() {
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/return-policy" element={<ReturnPolicy />} />
+          <Route path="/refund-policy" element={<Navigate to="/return-policy" replace />} />
+          <Route path="/returns" element={<Navigate to="/return-policy" replace />} />
           
           {/* Customer Account & Order History */}
           <Route path="/account" element={<AccountAuth />} />

@@ -92,7 +92,7 @@ export default function Footer() {
               <li><button onClick={() => navigate('/faq')} className="footer-link">Frequently Asked Questions</button></li>
               <li><button onClick={() => navigate('/about')} className="footer-link">Our Brand Story</button></li>
               <li><button onClick={() => navigate('/contact')} className="footer-link">Contact Us</button></li>
-              <li><a href="#" onClick={(e) => { e.preventDefault(); alert("Returns Policy:\nWe offer exchanges within 7 days of delivery for any manufacturing defect or sizing mismatch. The jersey must be unused with original tags attached."); }} className="footer-link">Return & Refund Policy</a></li>
+              <li><button onClick={() => navigate('/return-policy')} className="footer-link">Return &amp; Refund Policy</button></li>
             </ul>
           </div>
 
@@ -168,7 +168,8 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} GoalWear. All Rights Reserved. Made for true football fans.
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <span style={{ cursor: 'pointer' }} onClick={() => navigate('/return-policy')}>Return &amp; Refund Policy</span>
             <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Privacy Policy:\nYour contact number and delivery address are strictly used for order fulfillment and courier tracking.")}>Privacy Policy</span>
             <span style={{ cursor: 'pointer' }} onClick={() => alert("GoalWear Merchant Terms:\nOfficial fan and player issue jersey apparel. Advance delivery charge confirms cash-on-delivery parcel shipping.")}>Terms of Service</span>
           </div>

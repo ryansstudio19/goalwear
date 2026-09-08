@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { ShopContext } from '../context/ShopContext';
 import { Heart, Star, ShoppingBag, Eye } from 'lucide-react';
+import TiltGrowJerseyImage from './TiltGrowJerseyImage';
 
 export default function ProductCard({ product, onQuickView }) {
   const { wishlist, toggleWishlist, addToCart, setView } = useContext(ShopContext);
@@ -141,53 +142,52 @@ export default function ProductCard({ product, onQuickView }) {
         <Heart size={18} fill={isWishlisted ? 'var(--accent)' : 'none'} />
       </button>
 
-      {/* Product Image Area */}
-      <div style={{
-        borderRadius: '8px',
-        backgroundColor: 'var(--bg-tertiary)',
-        width: '100%',
-        height: '240px',
-        overflow: 'hidden',
-        position: 'relative'
-      }} className="image-container">
-        <img 
-          src={product.image} 
+      {/* Product Image Area with Subtle 3D Tilt & Grow */}
+      <div style={{ width: '100%', height: '240px', position: 'relative' }}>
+        <TiltGrowJerseyImage
+          src={product.image}
           alt={product.name}
+          maxTilt={9}
+          growScale={1.06}
+          glowColor={product.design?.primaryColor ? `${product.design.primaryColor}55` : 'rgba(0, 255, 136, 0.35)'}
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.5s ease'
+            borderRadius: '10px',
+            backgroundColor: 'var(--bg-tertiary)',
+            height: '240px',
           }}
-          className="product-img"
-        />
-        
-        {/* Quick actions overlay on hover */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: '100%',
-          padding: '12px',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '10px',
-          opacity: 0,
-          transition: 'opacity 0.3s ease'
-        }} className="quick-actions">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickView(product);
+          imgStyle={{
+            objectFit: 'cover',
+          }}
+        >
+          {/* Quick actions overlay on hover */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              padding: '12px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.88), transparent)',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '10px',
+              zIndex: 10,
             }}
-            className="btn-premium btn-secondary-glass" 
-            style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '0.75rem' }}
+            className="quick-actions"
           >
-            <Eye size={14} />
-            <span>Quick View</span>
-          </button>
-        </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickView(product);
+              }}
+              className="btn-premium btn-secondary-glass" 
+              style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '0.75rem', backdropFilter: 'blur(8px)' }}
+            >
+              <Eye size={14} />
+              <span>Quick View</span>
+            </button>
+          </div>
+        </TiltGrowJerseyImage>
       </div>
 
       {/* Product Info */}
@@ -219,13 +219,15 @@ export default function ProductCard({ product, onQuickView }) {
         </div>
       </div>
 
-      {/* Sandbox CTA */}
+      {/* Product Details CTA */}
       <div style={{ marginTop: 'auto' }}>
         <button 
+          onClick={handleCardClick}
           className="btn-premium btn-accent-border"
-          style={{ width: '100%', padding: '10px 0', fontSize: '0.8rem' }}
+          style={{ width: '100%', padding: '10px 0', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
         >
-          View 3D Sandbox
+          <Eye size={14} />
+          <span>View Kit Details</span>
         </button>
       </div>
 

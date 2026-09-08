@@ -4,7 +4,7 @@ import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ReviewsSection from '../components/ReviewsSection';
 import ProductCard from '../components/ProductCard';
-import { Heart, ShoppingBag, Star, Info, ListFilter, ClipboardCheck, ArrowLeft, Check, ZoomIn } from 'lucide-react';
+import { Heart, ShoppingBag, Star, Info, ListFilter, ClipboardCheck, ArrowLeft, Check, ZoomIn, Image as ImageIcon, Sparkles, User, Hash, ShieldCheck, Flame, RotateCcw, Truck } from 'lucide-react';
 
 export default function ProductDetails() {
   const { viewParams, wishlist, toggleWishlist, addToCart, setView, products: catalogProducts } = useContext(ShopContext);
@@ -16,6 +16,12 @@ export default function ProductDetails() {
   const [activeTab, setActiveTab] = useState('specs');
   const [addedSuccess, setAddedSuccess] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Customization & colorway states
+  const [activeColorway, setActiveColorway] = useState('home'); // 'home' | 'away' | 'third'
+  const [hasCustomization, setHasCustomization] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customNumber, setCustomNumber] = useState('');
   
   const allProducts = (catalogProducts && catalogProducts.length > 0) ? catalogProducts : products;
   const productId = routeProductId || viewParams?.productId || allProducts[0].id;
@@ -38,14 +44,43 @@ export default function ProductDetails() {
     setActiveTab('specs');
     setAddedSuccess(false);
     setActiveImageIndex(0);
+    setActiveColorway('home');
+    setHasCustomization(false);
+    setCustomName('');
+    setCustomNumber('');
   }, [productId]);
+
+  // Star player suggestions based on club/country
+  const getPlayerPresets = () => {
+    const nameLower = (product.name || '').toLowerCase();
+    if (nameLower.includes('argentina')) return [{ n: 'MESSI', num: '10' }, { n: 'DI MARIA', num: '11' }, { n: 'ALVAREZ', num: '9' }];
+    if (nameLower.includes('madrid')) return [{ n: 'BELLINGHAM', num: '5' }, { n: 'VINICIUS JR', num: '7' }, { n: 'MBAPPÉ', num: '9' }];
+    if (nameLower.includes('barcelona')) return [{ n: 'LAMINE YAMAL', num: '19' }, { n: 'PEDRI', num: '8' }, { n: 'LEWANDOWSKI', num: '9' }];
+    if (nameLower.includes('brazil')) return [{ n: 'VINICIUS JR', num: '7' }, { n: 'RODRYGO', num: '10' }, { n: 'NEYMAR JR', num: '10' }];
+    if (nameLower.includes('portugal')) return [{ n: 'RONALDO', num: '7' }, { n: 'B. FERNANDES', num: '8' }, { n: 'LEÃO', num: '17' }];
+    if (nameLower.includes('arsenal')) return [{ n: 'SAKA', num: '7' }, { n: 'ØDEGAARD', num: '8' }, { n: 'RICE', num: '41' }];
+    if (nameLower.includes('city')) return [{ n: 'HAALAND', num: '9' }, { n: 'DE BRUYNE', num: '17' }, { n: 'FODEN', num: '47' }];
+    if (nameLower.includes('united')) return [{ n: 'GARNACHO', num: '17' }, { n: 'BRUNO F.', num: '8' }, { n: 'MAINOO', num: '37' }];
+    return [{ n: 'CAPTAIN', num: '10' }, { n: 'STRIKER', num: '9' }, { n: 'LEGEND', num: '7' }];
+  };
+
+  const buildCustomizationData = () => {
+    if (hasCustomization && (customName.trim() || customNumber.trim())) {
+      return {
+        colorway: activeColorway,
+        customName: customName.trim().toUpperCase(),
+        customNumber: customNumber.trim() || '10'
+      };
+    }
+    return { colorway: activeColorway };
+  };
 
   const handleAddToCart = () => {
     if (!selectedSize) {
       alert("Please select a size first (S, M, L, XL, XXL)!");
       return;
     }
-    addToCart(product, selectedSize, quantity);
+    addToCart(product, selectedSize, quantity, buildCustomizationData());
     setAddedSuccess(true);
     setTimeout(() => setAddedSuccess(false), 4000);
   };
@@ -55,7 +90,7 @@ export default function ProductDetails() {
       alert("Please select a size first (S, M, L, XL, XXL)!");
       return;
     }
-    addToCart(product, selectedSize, quantity);
+    addToCart(product, selectedSize, quantity, buildCustomizationData());
     navigate('/checkout');
   };
 
@@ -145,37 +180,66 @@ export default function ProductDetails() {
         marginBottom: '60px'
       }} className="details-grid-layouts">
         
-        {/* Left Column: High-Resolution Photography Gallery */}
+        {/* Left Column: High-Resolution Studio Photography Gallery */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Gallery Header Badge Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '12px',
+            padding: '10px 16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ImageIcon size={16} color="var(--accent, #00ff88)" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#ffffff' }}>
+                Studio Matchday Photography
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent, #00ff88)' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent, #00ff88)', fontWeight: 800, textTransform: 'uppercase' }}>
+                4K Ultra-Res
+              </span>
+            </div>
+          </div>
+
+          {/* Main Photo Card */}
           <div 
             className="glass-panel" 
             style={{ 
-              padding: '12px', 
+              padding: '14px', 
               position: 'relative', 
               border: '1px solid var(--border-glass-hover)', 
               backgroundColor: 'rgba(10,12,18,0.7)', 
               boxShadow: 'var(--shadow-glass)',
-              borderRadius: '12px',
+              borderRadius: '14px',
               overflow: 'hidden'
             }}
           >
-            <div style={{ position: 'relative', width: '100%', height: '440px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '100%', height: '480px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <img 
                 src={galleryImages[activeImageIndex] || product.image} 
                 alt={`${product.name} View ${activeImageIndex + 1}`}
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
-                  transition: 'transform 0.4s ease'
+                  objectFit: 'contain',
+                  transition: 'transform 0.35s ease',
+                  filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))',
                 }}
               />
               <div style={{
                 position: 'absolute',
                 top: '14px',
                 right: '14px',
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(6px)',
+                backgroundColor: 'rgba(0,0,0,0.65)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255,255,255,0.15)',
                 padding: '6px 12px',
                 borderRadius: '20px',
                 fontSize: '0.75rem',
@@ -185,22 +249,22 @@ export default function ProductDetails() {
                 gap: '6px'
               }}>
                 <ZoomIn size={14} />
-                <span>High Resolution</span>
+                <span>Image {activeImageIndex + 1} of {galleryImages.length}</span>
               </div>
             </div>
 
             {/* Thumbnail Strip */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
               {galleryImages.map((imgUrl, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
                   style={{
-                    width: '74px',
-                    height: '74px',
-                    borderRadius: '6px',
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '8px',
                     border: '2px solid',
-                    borderColor: activeImageIndex === idx ? 'var(--accent)' : 'transparent',
+                    borderColor: activeImageIndex === idx ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
                     overflow: 'hidden',
                     backgroundColor: 'var(--bg-tertiary)',
                     cursor: 'pointer',
@@ -228,12 +292,12 @@ export default function ProductDetails() {
             alignItems: 'center',
             gap: '10px'
           }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 800 }}>✓ Official Quality:</span>
-            <span>Micro-mesh aeroready weave, silicone badge crest, verified match edition tailoring.</span>
+            <span style={{ color: 'var(--accent)', fontWeight: 800 }}>✓ Official Match Issue:</span>
+            <span>Laser-cut micro-ventilation, silicone crest badge, and thermal heat-bonded squad lettering.</span>
           </div>
         </div>
 
-        {/* Right Column: Info, Sizes, Actions */}
+        {/* Right Column: Info, Sizes, Customization & Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Header titles */}
@@ -379,6 +443,179 @@ export default function ProductDetails() {
             </div>
           </div>
 
+          {/* Official Vinyl Heat-Press Customization Panel */}
+          <div style={{
+            backgroundColor: hasCustomization ? 'rgba(0, 255, 136, 0.04)' : 'rgba(255, 255, 255, 0.02)',
+            border: `1px solid ${hasCustomization ? 'var(--accent)' : 'var(--border-glass)'}`,
+            borderRadius: '12px',
+            padding: '16px 18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={16} color="var(--accent)" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'white', letterSpacing: '0.04em' }}>
+                  Official Vinyl Heat-Press
+                </span>
+                <span style={{
+                  fontSize: '0.7rem',
+                  backgroundColor: 'rgba(0, 255, 136, 0.15)',
+                  color: 'var(--accent)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: 800,
+                  border: '1px solid rgba(0, 255, 136, 0.3)'
+                }}>
+                  FREE 24/25 SPECIAL
+                </span>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={hasCustomization}
+                  onChange={(e) => {
+                    setHasCustomization(e.target.checked);
+                    if (e.target.checked && !customName && !customNumber) {
+                      const firstPreset = getPlayerPresets()[0];
+                      if (firstPreset) {
+                        setCustomName(firstPreset.n);
+                        setCustomNumber(firstPreset.num);
+                      }
+                    }
+                  }}
+                  style={{ accentColor: 'var(--accent)', width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 700, color: hasCustomization ? 'var(--accent)' : 'inherit' }}>
+                  {hasCustomization ? 'Custom Print Active' : 'Add Custom Name & #' }
+                </span>
+              </label>
+            </div>
+
+            {hasCustomization && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '4px' }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Enter your name or select a star player. Updates live in 3D Arena view above!
+                </p>
+
+                {/* Quick Player Presets */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>Presets:</span>
+                  {getPlayerPresets().map((preset) => (
+                    <button
+                      key={preset.n}
+                      type="button"
+                      onClick={() => {
+                        setCustomName(preset.n);
+                        setCustomNumber(preset.num);
+                      }}
+                      style={{
+                        backgroundColor: customName === preset.n && customNumber === preset.num ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        border: `1px solid ${customName === preset.n && customNumber === preset.num ? 'var(--accent)' : 'rgba(255, 255, 255, 0.1)'}`,
+                        color: customName === preset.n && customNumber === preset.num ? 'var(--accent)' : 'white',
+                        borderRadius: '16px',
+                        padding: '3px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {preset.n} #{preset.num}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Player Name
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        value={customName}
+                        maxLength={14}
+                        placeholder="e.g. MESSI"
+                        onChange={(e) => setCustomName(e.target.value.toUpperCase())}
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: '6px',
+                          padding: '8px 12px 8px 30px',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}
+                      />
+                      <User size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Squad #
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        value={customNumber}
+                        maxLength={2}
+                        placeholder="10"
+                        onChange={(e) => setCustomNumber(e.target.value.replace(/\D/g, ''))}
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: '6px',
+                          padding: '8px 12px 8px 28px',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          fontWeight: 800,
+                          textAlign: 'center'
+                        }}
+                      />
+                      <Hash size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kit Edition selector (Home / Away / Third) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Edition:</span>
+                  {(['home', 'away', 'third']).map((edition) => (
+                    <button
+                      key={edition}
+                      type="button"
+                      onClick={() => setActiveColorway(edition)}
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '4px',
+                        border: '1px solid',
+                        borderColor: activeColorway === edition ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                        backgroundColor: activeColorway === edition ? 'rgba(0, 255, 136, 0.15)' : 'transparent',
+                        color: activeColorway === edition ? 'var(--accent)' : 'var(--text-secondary)',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {edition} Kit
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Qty Selector & Wishlist */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginTop: '10px' }}>
             
@@ -489,6 +726,67 @@ export default function ProductDetails() {
             color: 'var(--text-secondary)'
           }}>
             <strong>Direct Payment Heuristics:</strong> GoalWear operates via Cash On Delivery. To protect shipment logistics against false orders, the delivery charge of <strong>120 BDT</strong> must be pre-paid via bKash. You will enter the TxnID during the billing process.
+          </div>
+
+          {/* Trust Guarantees & Policy Links */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+            gap: '10px',
+            marginTop: '14px'
+          }}>
+            <button
+              onClick={() => navigate('/return-policy')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(0, 255, 136, 0.04)',
+                border: '1px solid rgba(0, 255, 136, 0.25)',
+                color: 'var(--accent)',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'var(--transition-fast)'
+              }}
+              title="Read our 7-day return and exchange policy"
+            >
+              <RotateCcw size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
+              <span>7-Day Return / Exchange Policy →</span>
+            </button>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border-glass)',
+              color: 'var(--text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 600
+            }}>
+              <ShieldCheck size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
+              <span>100% Authentic Badges</span>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border-glass)',
+              color: 'var(--text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 600
+            }}>
+              <Truck size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
+              <span>Open Parcel Verification</span>
+            </div>
           </div>
 
         </div>

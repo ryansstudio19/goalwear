@@ -104,6 +104,7 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      if (!result || !result.user) return null;
       const fbUser = result.user;
       const isAdmin = fbUser.email === 'ryantasinff@gmail.com' || fbUser.email === 'admin@goalwear.com';
       const profileData = {
@@ -125,6 +126,19 @@ export const AuthProvider = ({ children }) => {
 
       return result;
     } catch (err) {
+      // Gracefully handle normal user closure or dismissal of Google popup
+      if (
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request' ||
+        err.message?.includes('popup-closed-by-user')
+      ) {
+        return null;
+      }
+      if (err.code === 'auth/popup-blocked') {
+        const error = new Error('Pop-up window was blocked by your browser. Please allow pop-ups for this site or sign in with email.');
+        error.code = err.code;
+        throw error;
+      }
       console.error('Firebase Google Sign-In error:', err);
       throw err;
     }

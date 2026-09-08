@@ -344,11 +344,19 @@ export const ShopContextProvider = ({ children }) => {
     localStorage.removeItem('goalwear_products_catalog');
   };
 
-  // Cart operations
-  const addToCart = (product, size, quantity = 1) => {
+  // Cart operations with 3D Customization Support (Player Name, Number & Kit Edition)
+  const getItemKey = (item) => {
+    const custKey = item.customization
+      ? `${item.customization.customName || ''}-${item.customization.customNumber || ''}-${item.customization.colorway || ''}`
+      : 'standard';
+    return `${item.product.id}-${item.size}-${custKey}`;
+  };
+
+  const addToCart = (product, size, quantity = 1, customization = null) => {
     setCart((prevCart) => {
+      const targetKey = getItemKey({ product, size, customization });
       const existingItemIndex = prevCart.findIndex(
-        (item) => item.product.id === product.id && item.size === size
+        (item) => getItemKey(item) === targetKey
       );
 
       if (existingItemIndex > -1) {
@@ -356,28 +364,34 @@ export const ShopContextProvider = ({ children }) => {
         newCart[existingItemIndex].quantity += quantity;
         return newCart;
       } else {
-        return [...prevCart, { product, size, quantity }];
+        return [...prevCart, { product, size, quantity, customization }];
       }
     });
   };
 
-  const removeFromCart = (productId, size) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => !(item.product.id === productId && item.size === size))
-    );
+  const removeFromCart = (productId, size, customization = null) => {
+    setCart((prevCart) => {
+      if (!customization) {
+        return prevCart.filter((item) => !(item.product.id === productId && item.size === size));
+      }
+      const targetKey = getItemKey({ product: { id: productId }, size, customization });
+      return prevCart.filter((item) => getItemKey(item) !== targetKey);
+    });
   };
 
-  const updateCartQty = (productId, size, quantity) => {
+  const updateCartQty = (productId, size, quantity, customization = null) => {
     if (quantity <= 0) {
-      removeFromCart(productId, size);
+      removeFromCart(productId, size, customization);
       return;
     }
+    const targetKey = getItemKey({ product: { id: productId }, size, customization });
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.product.id === productId && item.size === size
-          ? { ...item, quantity }
-          : item
-      )
+      prevCart.map((item) => {
+        const match = customization
+          ? getItemKey(item) === targetKey
+          : item.product.id === productId && item.size === size;
+        return match ? { ...item, quantity } : item;
+      })
     );
   };
 

@@ -19,7 +19,7 @@ export default function NationalTeams() {
         style={{
           padding: '40px',
           marginBottom: '40px',
-          backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.9), rgba(0,255,136,0.05)), url("https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1200")',
+          backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.9), rgba(0,255,136,0.05)), url("https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=1200")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           border: '1px solid var(--border-glass-hover)',

@@ -1,14 +1,31 @@
 import React, { useState } from 'react';
-import { HelpCircle, Search } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { HelpCircle, Search, RotateCcw, ArrowRight } from 'lucide-react';
 
 export default function FAQ() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeIdx, setActiveIdx] = useState(null);
+  const navigate = useNavigate();
 
   const faqData = [
     {
+      q: "What is your Return & Refund Policy?",
+      a: "We offer a 7-day hassle-free size exchange and defect return policy. If you receive an incorrect size or manufacturing defect, you can exchange it within 7 days of receiving the package. Items must be unworn, unwashed, and have original tags intact.",
+      cat: "Returns"
+    },
+    {
+      q: "Can I inspect the jersey before paying the courier rider?",
+      a: "Yes! We encourage all customers to inspect their package in front of the courier delivery representative. If there is visible transit damage, wrong club, or wrong size delivered, you can reject the parcel on the spot.",
+      cat: "Returns"
+    },
+    {
+      q: "Are customized jerseys eligible for refund or return?",
+      a: "Jerseys heat-pressed with custom vinyl name and squad number cannot be returned for a cash refund unless GoalWear made a spelling or printing defect.",
+      cat: "Returns"
+    },
+    {
       q: "How does the bKash delivery fee pre-payment work?",
-      a: "Because jerseys are custom-packed and dispatched using premium courier partners, we require the delivery fee of 150 BDT to be paid first via bKash. The actual cost of the jersey is paid Cash On Delivery (COD) once you receive the package.",
+      a: "Because jerseys are custom-packed and dispatched using premium courier partners, we require the delivery fee of 120 BDT to be paid first via bKash. The actual cost of the jersey is paid Cash On Delivery (COD) once you receive the package.",
       cat: "Payment"
     },
     {
@@ -18,7 +35,7 @@ export default function FAQ() {
     },
     {
       q: "What happens if my Transaction ID is rejected?",
-      a: "If the transaction ID is incorrect or fails matching checks, our admin will reject the verification. Your order status on the Track Order page will show 'Rejected'. You can then email us at support@goalwear.com to rectify the TxnID.",
+      a: "If the transaction ID is incorrect or fails matching checks, our admin will reject the verification. Your order status on the Track Order page will show 'Rejected'. You can then contact us at support@goalwear.com or WhatsApp (+880 1848-520875) to rectify the TxnID.",
       cat: "Orders"
     },
     {
@@ -28,12 +45,12 @@ export default function FAQ() {
     },
     {
       q: "Can I customize the name and number printed on the back?",
-      a: "Custom printing can be requested by leaving a note on our Contact page.",
+      a: "Yes! On any product details page, toggle the 'Official Vinyl Heat-Press Customization' option to add your custom name and squad number.",
       cat: "Product"
     },
     {
       q: "Can I change my delivery address after placing an order?",
-      a: "Address changes are accepted before the order state transitions to 'Shipped'. Search your Order ID on the Track page to monitor current shipping stages.",
+      a: "Address changes are accepted before the order state transitions to 'Shipped'. Search your Order ID on the Track Order page to monitor current shipping stages.",
       cat: "Orders"
     }
   ];
@@ -47,11 +64,58 @@ export default function FAQ() {
     <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px', maxWidth: '800px' }}>
       
       {/* Title */}
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <h1 className="section-title">Support <span>Hub</span></h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '10px' }}>
           Frequently Asked Questions. Search keywords below to find solutions.
         </p>
+      </div>
+
+      {/* Return Policy Quick Callout Banner */}
+      <div 
+        onClick={() => navigate('/return-policy')}
+        className="glass-panel"
+        style={{
+          padding: '16px 20px',
+          marginBottom: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          border: '1px solid rgba(0, 255, 136, 0.3)',
+          backgroundColor: 'rgba(0, 255, 136, 0.04)',
+          borderRadius: '12px',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 280px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 255, 136, 0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent)',
+            flexShrink: 0
+          }}>
+            <RotateCcw size={20} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white' }}>
+              Looking for our Return &amp; Refund Policy?
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Check full eligibility criteria, 7-day size exchange steps, and doorstep verification.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontWeight: 700, fontSize: '0.85rem' }}>
+          <span>View Real Policy Page</span>
+          <ArrowRight size={16} />
+        </div>
       </div>
 
       {/* Search Input */}

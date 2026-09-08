@@ -49,7 +49,7 @@ export default function Wishlist() {
           <Heart size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
           <h3 style={{ fontSize: '1.2rem', textTransform: 'uppercase', marginBottom: '8px' }}>Wishlist is Empty</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
-            You haven't favorited any jerseys yet. Explore the sandbox view of our new season kits and bookmark your favorites.
+            You haven't favorited any jerseys yet. Explore our new season kits and bookmark your favorites.
           </p>
           <button onClick={() => setView('shop')} className="btn-premium btn-primary-glow" style={{ padding: '12px 28px' }}>
             Start Shopping

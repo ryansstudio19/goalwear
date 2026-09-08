@@ -47,9 +47,11 @@ export default function Cart() {
           
           {/* 1. Cart Items List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {cart.map((item, index) => (
+            {cart.map((item, index) => {
+              const itemKey = `${item.product.id}-${item.size}-${item.customization ? `${item.customization.customName || ''}-${item.customization.customNumber || ''}-${item.customization.colorway || ''}` : index}`;
+              return (
               <div 
-                key={`${item.product.id}-${item.size}`} 
+                key={itemKey} 
                 className="glass-panel"
                 style={{
                   padding: '20px',
@@ -72,18 +74,49 @@ export default function Cart() {
                       {item.product.category}
                     </span>
                     <h3 style={{ fontSize: '1rem', color: 'white', marginTop: '2px' }}>{item.product.name}</h3>
-                    <span style={{
-                      display: 'inline-block',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      marginTop: '6px'
-                    }}>
-                      SIZE: {item.size}
-                    </span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginTop: '6px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        color: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700
+                      }}>
+                        SIZE: {item.size}
+                      </span>
+                      {item.customization?.colorway && (
+                        <span style={{
+                          display: 'inline-block',
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          color: 'var(--accent)',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}>
+                          {item.customization.colorway} Edition
+                        </span>
+                      )}
+                      {(item.customization?.customName || item.customization?.customNumber) && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          backgroundColor: 'rgba(0, 255, 136, 0.12)',
+                          border: '1px solid var(--accent)',
+                          color: 'var(--accent)',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800
+                        }}>
+                          ★ #{item.customization.customNumber || '10'} {item.customization.customName || 'CUSTOM'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -97,7 +130,7 @@ export default function Cart() {
                     backgroundColor: 'var(--bg-tertiary)'
                   }}>
                     <button 
-                      onClick={() => updateCartQty(item.product.id, item.size, item.quantity - 1)}
+                      onClick={() => updateCartQty(item.product.id, item.size, item.quantity - 1, item.customization)}
                       style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}
                       className="qty-btn"
                     >
@@ -107,7 +140,7 @@ export default function Cart() {
                       {item.quantity}
                     </span>
                     <button 
-                      onClick={() => updateCartQty(item.product.id, item.size, item.quantity + 1)}
+                      onClick={() => updateCartQty(item.product.id, item.size, item.quantity + 1, item.customization)}
                       style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}
                       className="qty-btn"
                     >
@@ -117,8 +150,8 @@ export default function Cart() {
 
                   {/* Remove Button */}
                   <button 
-                    onClick={() => removeFromCart(item.product.id, item.size)}
-                    style={{ color: 'var(--text-muted)', transition: 'var(--transition-fast)' }}
+                    onClick={() => removeFromCart(item.product.id, item.size, item.customization)}
+                    style={{ color: 'var(--text-muted)', transition: 'var(--transition-fast)', background: 'none', border: 'none', cursor: 'pointer' }}
                     className="trash-hover"
                   >
                     <Trash2 size={18} />
@@ -135,7 +168,8 @@ export default function Cart() {
                   </strong>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
 
           {/* 2. Order Summary Sidebar */}

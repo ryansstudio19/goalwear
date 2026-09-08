@@ -3,6 +3,8 @@ import { ShopContext } from '../context/ShopContext';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
+import Stadium3DHero from '../components/Stadium3DHero';
+import TiltGrowJerseyImage from '../components/TiltGrowJerseyImage';
 import { Shield, Sparkles, Truck, RefreshCw, ChevronRight, HelpCircle, CheckCircle2, Award } from 'lucide-react';
 
 export default function Home() {
@@ -24,132 +26,11 @@ export default function Home() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '80px', paddingBottom: '80px' }}>
       
-      {/* Hero Section */}
-      <section style={{
-        position: 'relative',
-        minHeight: '85vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '100px 0 60px',
-        overflow: 'hidden',
-        borderBottom: '1px solid var(--border-glass)',
-        background: 'radial-gradient(circle at 50% 30%, rgba(0, 255, 136, 0.05), transparent 60%)'
-      }}>
-        {/* Animated Grid lines in background */}
-        <div style={{
-          position: 'absolute',
-          top: 0, left: 0, width: '100%', height: '100%',
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-          maskImage: 'radial-gradient(ellipse at center, black, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black, transparent 80%)',
-          pointerEvents: 'none'
-        }} />
-
-        <div className="container-custom hero-grid-layouts" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          lgTemplateColumns: '1.2fr 1fr',
-          gap: '50px',
-          alignItems: 'center',
-          position: 'relative',
-          zIndex: 5
-        }}>
-          
-          {/* Hero Left Content */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(0, 255, 136, 0.1)', border: '1px solid var(--accent)', padding: '6px 12px', borderRadius: '30px', width: 'fit-content' }}>
-              <Sparkles size={14} color="var(--accent)" />
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', letterSpacing: '0.05em' }}>New 24/25 Season Kits Dropped</span>
-            </div>
-            
-            <h1 style={{
-              fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-              lineHeight: 1.05,
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em'
-            }}>
-              WEAR THE <br />
-              <span style={{ color: 'var(--accent)', textShadow: '0 0 20px var(--accent-glow)' }}>PASSION.</span> <br />
-              RULE THE PITCH.
-            </h1>
-            
-            <p style={{
-              fontSize: 'clamp(1rem, 2vw, 1.15rem)',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.7,
-              maxWidth: '540px'
-            }}>
-              Custom crafted, ultra-premium football jerseys engineered for elite athletes and die-hard supporters. Official player edition weaves, verified silicone badges, and fast nationwide delivery.
-            </p>
-            
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '10px' }}>
-              <button onClick={() => setView('shop')} className="btn-premium btn-primary-glow" style={{ padding: '16px 36px' }}>
-                Explore Shop
-              </button>
-              <button onClick={() => setView('sizeguide')} className="btn-premium btn-secondary-glass" style={{ padding: '16px 36px' }}>
-                Sizing Guide
-              </button>
-            </div>
-          </div>
-
-          {/* Hero Right: Featured Match Jersey Spotlight */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-            <div 
-              className="glass-panel animate-float"
-              style={{
-                width: '100%',
-                maxWidth: '440px',
-                border: '1px solid var(--border-glass-hover)',
-                borderRadius: '24px',
-                padding: '16px',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                backgroundColor: 'rgba(10, 12, 18, 0.85)'
-              }}
-            >
-              <div style={{ position: 'relative', height: '360px', borderRadius: '16px', overflow: 'hidden', backgroundColor: 'var(--bg-tertiary)' }}>
-                <img 
-                  src={featuredJersey.image} 
-                  alt={featuredJersey.name} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div style={{
-                  position: 'absolute',
-                  top: '12px',
-                  left: '12px',
-                  backgroundColor: 'rgba(0,0,0,0.75)',
-                  backdropFilter: 'blur(8px)',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  border: '1px solid var(--accent)',
-                  color: 'var(--accent)',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase'
-                }}>
-                  Player Issue
-                </div>
-              </div>
-              
-              <div style={{ padding: '16px 8px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', margin: 0 }}>{featuredJersey.name}</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, margin: '4px 0 0' }}>৳{featuredJersey.price}</p>
-                </div>
-                <button 
-                  onClick={() => setView('product-details', { productId: featuredJersey.id })}
-                  className="btn-premium btn-primary-glow" 
-                  style={{ padding: '10px 20px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 800 }}
-                >
-                  Order Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Immersive 3D Kickoff Stadium Hero */}
+      <Stadium3DHero
+        featuredProduct={featuredJersey}
+        onSelectProduct={(pId) => setView('product-details', { productId: pId })}
+      />
 
       {/* Trust Badges Bar */}
       <section className="container-custom">
@@ -193,7 +74,7 @@ export default function Home() {
             style={{
               padding: '40px',
               height: '320px',
-              backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.85), rgba(0,255,136,0.03)), url("https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=800")',
+              backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.85), rgba(0,255,136,0.03)), url("https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800")',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               display: 'flex',
@@ -300,15 +181,24 @@ export default function Home() {
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', maxWidth: '420px', padding: '16px', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
-              <img 
-                src={products[3].image} 
-                alt="Man City Match Edition" 
-                style={{ width: '100%', height: '320px', objectFit: 'cover', borderRadius: '10px' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>{products[3].name}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>৳{products[3].price}</span>
+            <div 
+              onClick={() => setView('product-details', { productId: products[3].id })}
+              style={{ width: '100%', maxWidth: '420px', padding: '16px', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
+            >
+              <div style={{ width: '100%', height: '320px' }}>
+                <TiltGrowJerseyImage 
+                  src={products[3].image} 
+                  alt={products[3].name} 
+                  maxTilt={8}
+                  growScale={1.05}
+                  glowColor="rgba(0, 255, 136, 0.3)"
+                  style={{ borderRadius: '10px', height: '320px' }}
+                  imgStyle={{ height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'white' }}>{products[3].name}</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent)' }}>৳{products[3].price}</span>
               </div>
             </div>
           </div>
