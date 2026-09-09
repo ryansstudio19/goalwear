@@ -55,10 +55,16 @@ export default function InteractiveSparkButton({
   const handleClick = (e) => {
     if (disabled) return;
 
-    // Calculate click coordinates relative to button
+    // Calculate click coordinates relative to button safely (supporting touch, keyboard & mouse)
     const rect = buttonRef.current?.getBoundingClientRect();
-    const x = e.clientX - (rect?.left || 0);
-    const y = e.clientY - (rect?.top || 0);
+    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0]?.clientY);
+    const x = (clientX !== undefined && clientX !== 0 && rect) 
+      ? clientX - rect.left 
+      : (rect ? rect.width / 2 : 20);
+    const y = (clientY !== undefined && clientY !== 0 && rect) 
+      ? clientY - rect.top 
+      : (rect ? rect.height / 2 : 20);
 
     // 1. Add Ripple
     const rippleId = Date.now() + Math.random();
@@ -113,6 +119,8 @@ export default function InteractiveSparkButton({
         position: 'relative',
         overflow: 'hidden',
         cursor: disabled ? 'not-allowed' : 'pointer',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
         transition: 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease',
         ...style,
       }}
@@ -123,6 +131,15 @@ export default function InteractiveSparkButton({
         if (!disabled) e.currentTarget.style.transform = 'scale(1)';
       }}
       onMouseLeave={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(1)';
+      }}
+      onTouchStart={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(0.965)';
+      }}
+      onTouchEnd={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(1)';
+      }}
+      onTouchCancel={(e) => {
         if (!disabled) e.currentTarget.style.transform = 'scale(1)';
       }}
       {...rest}

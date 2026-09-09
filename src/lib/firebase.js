@@ -3,6 +3,9 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
+  signInWithCredential,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut as fbSignOut,
@@ -17,6 +20,7 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   addDoc, 
   query, 
   where, 
@@ -25,6 +29,7 @@ import {
   getDocFromServer
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+export { firebaseConfig };
 
 // Initialize Firebase App singleton
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -65,7 +70,11 @@ export function handleFirestoreError(error, operationType, path) {
 }
 
 export {
+  GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   fbSignOut,
@@ -77,6 +86,7 @@ export {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   addDoc,
   query,
   where,

@@ -353,8 +353,8 @@ export default function KickoffBackgroundVideo({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '88px 16px 50px',
+          justifyContent: 'flex-start',
+          padding: 'clamp(85px, 11vh, 105px) 16px clamp(40px, 8vh, 70px)',
           opacity: isFormHidden ? 0 : 1,
           transform: isFormHidden ? 'scale(0.96)' : 'scale(1)',
           pointerEvents: isFormHidden ? 'none' : 'auto',
@@ -362,10 +362,11 @@ export default function KickoffBackgroundVideo({
         }}
       >
         <div
+          className="auth-card-container-wrapper"
           style={{
             width: '100%',
             maxWidth: '460px',
-            margin: '0 auto',
+            margin: 'auto',
           }}
         >
           {children}

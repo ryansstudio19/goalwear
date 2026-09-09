@@ -11,11 +11,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
+      return (isSignedIn() && (
+        request.auth.token.email == 'siyamisaba@gmail.com' ||
         request.auth.token.email == 'ryantasinff@gmail.com' ||
         request.auth.token.email == 'admin@goalwear.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      ));
     }
 
     // Default deny all
@@ -29,19 +30,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Customer Profiles
+    // Customer Profiles & User Accounts (cross-device persistent)
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow read: if true;
+      allow create: if request.resource.data.email is string && request.resource.data.email.size() > 3;
+      allow update: if isOwner(userId) || isAdmin() || (request.resource.data.email is string);
       allow delete: if isAdmin();
     }
 
-    // Customer Orders
+    // Customer Orders & Shipment Tracking
     match /orders/{orderId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.customerId == request.auth.uid);
-      allow create: if request.resource.data.totalAmount is number && request.resource.data.totalAmount > 0;
-      allow update: if isAdmin();
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
       allow delete: if isAdmin();
     }
 
