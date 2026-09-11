@@ -23,12 +23,21 @@ import {
 
 export default function Navbar() {
   const { currentView, setView, getCartCount, wishlist, isAdminLoggedIn } = useContext(ShopContext);
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, isOwner } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isStoreAdmin = Boolean(
+    isAdmin || 
+    isOwner || 
+    isAdminLoggedIn || 
+    profile?.role === 'admin' || 
+    profile?.role === 'owner' || 
+    (user?.email && ['siyamisaba@gmail.com', 'admin@goalwear.com', 'ryantasinff@gmail.com'].includes(user.email.toLowerCase()))
+  );
 
   // Close mobile menu & search upon route transitions
   useEffect(() => {
@@ -226,6 +235,38 @@ export default function Navbar() {
               }} />
             )}
           </button>
+
+          {/* Admin Portal Quick Access Button */}
+          {isStoreAdmin && (
+            <button
+              id="nav-admin-portal-btn"
+              onClick={() => navigate('/admin')}
+              className="nav-action-btn"
+              style={{
+                position: 'relative',
+                color: location.pathname.startsWith('/admin') ? '#000000' : 'var(--accent)',
+                backgroundColor: location.pathname.startsWith('/admin') ? 'var(--accent)' : 'rgba(0, 255, 136, 0.12)',
+                border: '1px solid var(--accent)',
+                borderRadius: '8px',
+                padding: '0 10px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 800,
+                fontSize: '0.74rem',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                boxShadow: '0 0 10px rgba(0, 255, 136, 0.3)',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              title="Merchant Admin Portal"
+            >
+              <ShieldCheck size={16} />
+              <span className="hidden sm:inline">Admin</span>
+            </button>
+          )}
 
           {/* 3. Wishlist */}
           <button 
@@ -439,6 +480,38 @@ export default function Navbar() {
             </div>
             <ChevronRight size={18} color="var(--text-muted)" />
           </div>
+
+          {/* Admin Portal in Drawer */}
+          {isStoreAdmin && (
+            <div 
+              id="mobile-nav-admin-portal-link"
+              onClick={() => { navigate('/admin'); setMobileMenuOpen(false); }}
+              style={{
+                padding: '12px 16px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(0, 255, 136, 0.12)',
+                border: '1px solid var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                boxShadow: '0 0 12px rgba(0, 255, 136, 0.2)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={18} color="var(--accent)" />
+                <div>
+                  <span style={{ display: 'block', fontSize: '0.88rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                    Merchant Admin Portal
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#e2e8f0' }}>
+                    Orders, bKash audits, &amp; inventory
+                  </span>
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--accent)" />
+            </div>
+          )}
 
           {/* Quick Search Form inside Drawer */}
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>

@@ -143,6 +143,32 @@ export const FIREBASE_AUTH_ERROR_MAP = {
     action: null,
   },
 
+  'auth/unauthorized-domain': {
+    code: 'auth/unauthorized-domain',
+    title: 'Domain Not Authorized in Firebase',
+    description: 'This preview domain is not yet in Firebase Authentication Authorized Domains.',
+    instruction: 'To sign in immediately, please use the Email & Password form above (no OAuth setup needed). To enable Google Sign-In for this domain, add this domain in Firebase Console -> Authentication -> Settings -> Authorized domains.',
+    severity: 'warning',
+    iconName: 'ShieldAlert',
+    action: {
+      label: 'Sign in with Email',
+      type: 'switch_to_signin',
+    },
+  },
+
+  'auth/origin-mismatch': {
+    code: 'auth/origin-mismatch',
+    title: 'Google OAuth Origin Mismatch (Error 400)',
+    description: 'The Google OAuth Client ID rejected this preview domain because it is not registered in Google Cloud Console.',
+    instruction: 'Please sign in directly with your Email and Password above. Cloud verification operates smoothly through Firestore without requiring OAuth domain registration.',
+    severity: 'warning',
+    iconName: 'ShieldAlert',
+    action: {
+      label: 'Sign in with Email',
+      type: 'switch_to_signin',
+    },
+  },
+
   'auth/account-exists-with-different-credential': {
     code: 'auth/account-exists-with-different-credential',
     title: 'Different Sign-In Method',
@@ -268,6 +294,15 @@ export function extractAuthErrorCode(error) {
   }
   if (lower.includes('popup blocked')) {
     return 'auth/popup-blocked';
+  }
+  if (lower.includes('origin_mismatch') || lower.includes('origin mismatch') || (lower.includes('400') && lower.includes('origin'))) {
+    return 'auth/origin-mismatch';
+  }
+  if (lower.includes('unauthorized-domain') || lower.includes('unauthorized domain')) {
+    return 'auth/unauthorized-domain';
+  }
+  if (lower.includes('operation-not-allowed') || lower.includes('not-allowed') || lower.includes('provider is disabled')) {
+    return 'auth/operation-not-allowed';
   }
   if (lower.includes('permission') || lower.includes('permission_denied')) {
     return 'permission-denied';

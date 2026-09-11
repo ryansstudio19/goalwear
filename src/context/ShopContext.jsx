@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { products as defaultProducts } from '../data/products';
 import { supabase } from '../supabaseClient';
-import { db, doc, setDoc, updateDoc } from '../lib/firebase';
+import { db, doc, setDoc, updateDoc, collection, getDocs, query, orderBy, deleteDoc, onSnapshot } from '../lib/firebase';
 
 export const ShopContext = createContext();
 
@@ -119,6 +119,33 @@ export const ShopContextProvider = ({ children }) => {
 
   // --- Supabase orders: fetch + realtime sync ---
 
+  // Standardizes any status string into the canonical Admin Panel and tracking statuses:
+  // 'Pending verification' | 'bKash Verified' | 'Processing' | 'Shipped' | 'Delivered' | 'Rejected'
+  const normalizeOrderStatus = (rawStatus) => {
+    if (!rawStatus) return 'Pending verification';
+    const s = String(rawStatus).trim();
+    const lower = s.toLowerCase().replace(/[\s_-]+/g, ' ');
+    if (lower === 'bkash verified' || lower === 'verified' || lower === 'paid' || lower === 'bkash_verified') {
+      return 'bKash Verified';
+    }
+    if (lower === 'processing' || lower === 'packaging' || lower === 'in processing') {
+      return 'Processing';
+    }
+    if (lower === 'shipped' || lower === 'dispatched' || lower === 'in transit') {
+      return 'Shipped';
+    }
+    if (lower === 'delivered' || lower === 'completed') {
+      return 'Delivered';
+    }
+    if (lower === 'rejected' || lower === 'cancelled' || lower === 'canceled' || lower === 'fake') {
+      return 'Rejected';
+    }
+    if (lower === 'pending verification' || lower === 'pending' || lower === 'pending_verification') {
+      return 'Pending verification';
+    }
+    return s;
+  };
+
   // Converts a Supabase row (snake_case) into the shape the rest of the app expects (camelCase)
   const mapRowToOrder = (row) => ({
     id: row.order_number || row.id,
@@ -129,41 +156,141 @@ export const ShopContextProvider = ({ children }) => {
     phone: row.shipping_phone || row.phone || '',
     address: row.shipping_address || row.address || '',
     city: row.shipping_city || row.city || 'Dhaka',
-    bkashNumber: row.bkash_number,
-    bkashTxnId: row.bkash_txn_id,
-    items: row.items || [],
+    bkashNumber: row.bkash_number || '',
+    bkashTxnId: row.bkash_txn_id || row.bkashTrxId || '',
+    items: Array.isArray(row.items) ? row.items : [],
     subtotal: Number(row.subtotal || 0),
     deliveryCharge: Number(row.delivery_charge ?? 120),
     total: Number(row.total || 0),
-    status: row.status || 'Pending verification',
+    status: normalizeOrderStatus(row.status),
     paymentStatus: row.payment_status || 'PENDING_VERIFICATION'
   });
 
+  // Maps a Firestore document directly into the standard order model
+  const mapFirestoreToOrder = (docId, d) => {
+    const oId = d.orderNumber || d.order_number || d.id || docId;
+    const sub = Number(d.subtotal ?? (d.totalAmount ? d.totalAmount - (d.deliveryFee || 120) : (d.total ? d.total - 120 : 0)));
+    const deliv = Number(d.deliveryFee ?? d.deliveryCharge ?? d.delivery_charge ?? 120);
+    const tot = Number(d.totalAmount ?? d.total ?? (sub + deliv));
+
+    return {
+      id: oId,
+      orderNumber: oId,
+      customerId: d.customerId || d.customer_id || null,
+      date: d.createdAt || d.created_at || new Date().toISOString(),
+      customerName: d.customerName || d.shippingName || d.customer_name || d.shipping_name || 'Customer',
+      phone: d.phone || d.shippingPhone || d.shipping_phone || '',
+      address: d.address || d.shippingAddress || d.shipping_address || '',
+      city: d.city || d.shippingCity || d.shipping_city || 'Dhaka',
+      bkashNumber: d.bkashNumber || d.bkash_number || '',
+      bkashTxnId: d.bkashTxnId || d.bkashTrxId || d.bkash_txn_id || '',
+      items: Array.isArray(d.items) && d.items.length > 0 ? d.items : [
+        {
+          product: {
+            id: 'custom-order-item',
+            name: 'GoalWear Authenticated Kit',
+            price: sub > 0 ? sub : 3850,
+            image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop'
+          },
+          size: 'M',
+          quantity: 1
+        }
+      ],
+      subtotal: sub,
+      deliveryCharge: deliv,
+      total: tot,
+      status: normalizeOrderStatus(d.status),
+      paymentStatus: d.paymentStatus || d.payment_status || 'PENDING_VERIFICATION'
+    };
+  };
+
   const fetchOrders = async () => {
     setOrdersLoading(true);
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let combined = [];
 
-    if (error) {
-      console.log('Orders fetch skipped (not authenticated or no rows):', error.message);
-      setOrders([]);
-    } else {
-      setOrders((data || []).map(mapRowToOrder));
+    // 1. Fetch from Supabase / mock orders storage
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        combined = data.map(mapRowToOrder);
+      }
+    } catch (err) {
+      console.warn('Orders fetch error from Supabase/storage:', err);
     }
+
+    // 2. Fetch live placed orders from Firestore
+    try {
+      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const fbOrder = mapFirestoreToOrder(docSnap.id, d);
+        const existingIdx = combined.findIndex((o) => o.id === fbOrder.id);
+
+        if (existingIdx >= 0) {
+          combined[existingIdx] = { ...combined[existingIdx], ...fbOrder };
+        } else {
+          combined.push(fbOrder);
+        }
+      });
+    } catch (fbErr) {
+      console.warn('Firestore orders sync notice:', fbErr);
+    }
+
+    // Sort newest orders first
+    combined.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    setOrders(combined);
     setOrdersLoading(false);
   };
 
   useEffect(() => {
+    // 1. Initial full fetch
     fetchOrders();
 
-    // Refetch whenever auth state changes (e.g. admin logs in/out)
+    // 2. Realtime listener on Firestore: Any new order placed anywhere immediately reflects in the Admin Portal!
+    let unsubscribeFirestore = null;
+    try {
+      const ordersCol = collection(db, 'orders');
+      unsubscribeFirestore = onSnapshot(ordersCol, (snapshot) => {
+        if (!snapshot.empty) {
+          const liveOrders = [];
+          snapshot.forEach((docSnap) => {
+            liveOrders.push(mapFirestoreToOrder(docSnap.id, docSnap.data()));
+          });
+          liveOrders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+          setOrders((prev) => {
+            const map = new Map();
+            // Put latest live Firestore orders
+            liveOrders.forEach((o) => map.set(o.id, o));
+            // Keep any local orders not yet in Firestore
+            (prev || []).forEach((o) => {
+              if (!map.has(o.id)) map.set(o.id, o);
+            });
+            const merged = Array.from(map.values());
+            merged.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            return merged;
+          });
+          setOrdersLoading(false);
+        }
+      }, (err) => {
+        console.warn('Firestore real-time orders listener notice:', err);
+      });
+    } catch (e) {
+      console.warn('Failed setting up orders real-time snapshot:', e);
+    }
+
+    // 3. Refetch whenever auth state changes (e.g. admin logs in/out)
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       fetchOrders();
     });
 
     return () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
       authListener?.subscription?.unsubscribe();
     };
   }, []);
@@ -490,10 +617,23 @@ export const ShopContextProvider = ({ children }) => {
       console.warn('Atomic RPC skipped or pending schema deployment, using direct orders insert:', rpcErr);
     }
 
+    // Prepare clean serializable order items array for cross-device persistence
+    const itemsForStorage = cart.map((item) => ({
+      product: {
+        id: item.product?.id || 'item',
+        name: item.product?.name || 'GoalWear Jersey Kit',
+        price: Number(item.product?.price || 0),
+        image: item.product?.image || item.product?.images?.[0] || 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop'
+      },
+      size: item.size || 'M',
+      quantity: Number(item.quantity || 1),
+      customization: item.customization || null
+    }));
+
     if (!atomicSucceeded) {
       const newOrderRow = {
-        id: orderId,
-        order_number: orderId,
+        id: finalOrderId,
+        order_number: finalOrderId,
         customer_id: customerDetails.customerId || null,
         customer_name: customerDetails.name,
         shipping_name: customerDetails.name,
@@ -501,9 +641,11 @@ export const ShopContextProvider = ({ children }) => {
         shipping_phone: customerDetails.phone,
         address: customerDetails.address,
         shipping_address: customerDetails.address,
+        city: customerDetails.city || 'Dhaka',
+        shipping_city: customerDetails.city || 'Dhaka',
         bkash_number: customerDetails.bkashNumber,
         bkash_txn_id: customerDetails.bkashTxnId,
-        items: cart,
+        items: itemsForStorage,
         subtotal,
         delivery_charge: deliveryCharge,
         total,
@@ -512,35 +654,45 @@ export const ShopContextProvider = ({ children }) => {
         created_at: new Date().toISOString()
       };
 
-      const { error } = await supabase.from('orders').insert(newOrderRow);
-
-      if (error) {
-        console.error('Failed to place order:', error.message);
-        alert('Something went wrong placing your order. Please try again.');
-        return null;
+      try {
+        const { error } = await supabase.from('orders').insert(newOrderRow);
+        if (error) {
+          console.warn('Supabase local/mock order store note:', error.message);
+        }
+      } catch (insertErr) {
+        console.warn('Direct order store note:', insertErr);
       }
     }
 
-    // Synchronize placed order into Firebase Firestore
+    // Synchronize placed order into Firebase Firestore so the Admin Portal on ANY device receives it instantly!
     try {
       await setDoc(doc(db, 'orders', finalOrderId), {
         id: finalOrderId,
         orderNumber: finalOrderId,
+        order_number: finalOrderId,
         customerId: customerDetails.customerId || 'guest',
         customerName: customerDetails.name,
+        shippingName: customerDetails.name,
         phone: customerDetails.phone,
         address: customerDetails.address,
         city: customerDetails.city || 'Dhaka',
-        totalAmount: total,
+        items: itemsForStorage,
+        subtotal: subtotal,
         deliveryFee: deliveryCharge,
-        status: 'pending_verification',
+        deliveryCharge: deliveryCharge,
+        totalAmount: total,
+        total: total,
+        status: 'Pending verification',
+        paymentStatus: 'PENDING_VERIFICATION',
         paymentMethod: 'Cash on Delivery (bKash Adv)',
-        bkashTrxId: customerDetails.bkashTxnId || '',
         bkashNumber: customerDetails.bkashNumber || '',
-        createdAt: new Date().toISOString()
-      });
+        bkashTxnId: customerDetails.bkashTxnId || '',
+        bkashTrxId: customerDetails.bkashTxnId || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch (fbErr) {
-      console.warn('[GoalWear Firebase] Firestore sync fallback:', fbErr);
+      console.error('[GoalWear Firebase] Firestore sync error:', fbErr);
     }
 
     // Refresh orders in context
@@ -551,32 +703,40 @@ export const ShopContextProvider = ({ children }) => {
     return finalOrderId;
   };
 
-  // Admin Verification Panel operations - updates Supabase
+  // Admin Verification Panel operations - updates Supabase & Firestore in real-time
   const updateOrderStatus = async (orderId, newStatus) => {
+    // Canonicalize status
+    const canonicalStatus = normalizeOrderStatus(newStatus);
+
     // Optimistically update local state so UI feels instant
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
+        order.id === orderId ? { ...order, status: canonicalStatus } : order
       )
     );
 
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', orderId);
+    // Update in Supabase / mock store
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: canonicalStatus })
+        .eq('id', orderId);
 
-    if (error) {
-      console.error('Failed to update order status:', error.message);
-      fetchOrders();
+      if (error) {
+        console.warn('Supabase update order status:', error.message);
+      }
+    } catch (err) {
+      console.warn('Supabase status update note:', err);
     }
 
+    // Update in Firebase Firestore so customer and other admin devices see the status change immediately
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status: newStatus.toLowerCase().replace(/\s+/g, '_'),
+      await setDoc(doc(db, 'orders', orderId), {
+        status: canonicalStatus,
         updatedAt: new Date().toISOString()
-      });
-    } catch {
-      // ignore if not cached yet
+      }, { merge: true });
+    } catch (fbErr) {
+      console.warn('Firestore status update error:', fbErr);
     }
   };
 
@@ -585,8 +745,12 @@ export const ShopContextProvider = ({ children }) => {
     try {
       await supabase.from('orders').delete().eq('id', orderId);
     } catch (err) {
-      console.error('Failed to delete order:', err);
-      fetchOrders();
+      console.error('Failed to delete order from Supabase/storage:', err);
+    }
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+    } catch (fbErr) {
+      console.warn('Failed to delete order from Firestore:', fbErr);
     }
   };
 

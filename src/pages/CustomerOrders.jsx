@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ShopContext } from '../context/ShopContext';
 import { supabase } from '../supabaseClient';
 import { Package, Clock, Truck, CheckCircle2, ChevronRight, ArrowLeft, Eye, ExternalLink } from 'lucide-react';
 
 export default function CustomerOrders() {
   const { user, profile } = useAuth();
+  const { orders: contextOrders } = useContext(ShopContext);
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
@@ -21,6 +23,16 @@ export default function CustomerOrders() {
     const fetchCustomerOrders = async () => {
       setLoading(true);
       try {
+        let matched = [];
+        // Match from ShopContext first (which has live Firestore + Supabase orders)
+        if (Array.isArray(contextOrders)) {
+          matched = contextOrders.filter(o => 
+            (user?.id && o.customerId === user.id) ||
+            (profile?.phone && o.phone && o.phone.replace(/\D/g, '').includes(profile.phone.replace(/\D/g, ''))) ||
+            (profile?.full_name && o.customerName && o.customerName.toLowerCase() === profile.full_name.toLowerCase())
+          );
+        }
+
         const { data, error } = await supabase
           .from('orders')
           .select(`
@@ -31,16 +43,15 @@ export default function CustomerOrders() {
           .eq('customer_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (error) {
-          // If schema is still mock or customer_id is empty, fallback to local search by user email/phone
-          console.warn('Orders query:', error.message);
-          const { data: fallbackOrders } = await supabase.from('orders').select('*');
-          if (fallbackOrders) {
-            setOrders(fallbackOrders.filter(o => o.phone === profile?.phone || o.customer_name === profile?.full_name));
-          }
-        } else if (data) {
-          setOrders(data);
+        if (!error && Array.isArray(data)) {
+          data.forEach(dbOrder => {
+            const id = dbOrder.order_number || dbOrder.id;
+            const exists = matched.some(m => m.id === id);
+            if (!exists) matched.push(dbOrder);
+          });
         }
+
+        setOrders(matched);
       } catch (err) {
         console.error('Failed to load orders:', err);
       } finally {
@@ -49,7 +60,7 @@ export default function CustomerOrders() {
     };
 
     fetchCustomerOrders();
-  }, [user, profile, navigate]);
+  }, [user, profile, contextOrders, navigate]);
 
   const getStatusBadge = (status) => {
     switch (status) {

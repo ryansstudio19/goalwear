@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { firebaseConfig } from '../lib/firebase';
 import { User, Lock, Mail, Phone, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Film, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import KickoffVideoModal from '../components/KickoffVideoModal';
 import KickoffBackgroundVideo from '../components/KickoffBackgroundVideo';
-import InteractiveSparkButton from '../components/InteractiveSparkButton';
 import AuthErrorMessage from '../components/AuthErrorMessage';
 
 export default function AccountAuth() {
-  const { user, profile, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
+  const { user, profile, isAdmin, isOwner, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,14 +65,20 @@ export default function AccountAuth() {
 
   const redirectPath = new URLSearchParams(location.search).get('redirect') || '/account';
 
-  // Mount Google Identity Services Button
+  // Mount Google Identity Services Button using configured Google Client ID from env or firebaseConfig
+  const configuredGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || firebaseConfig?.oAuthClientId;
+
   useEffect(() => {
     let timer;
+    if (!configuredGoogleClientId) {
+      return;
+    }
+
     const initGsi = () => {
-      if (window.google?.accounts?.id) {
+      if (window.google?.accounts?.id && configuredGoogleClientId) {
         try {
           window.google.accounts.id.initialize({
-            client_id: '782378080369-tva27l9r3dmgeo0q4vnki6gnndnblu50.apps.googleusercontent.com',
+            client_id: configuredGoogleClientId,
             callback: async (response) => {
               if (response?.credential) {
                 setSubmitting(true);
@@ -84,6 +90,7 @@ export default function AccountAuth() {
                     navigate(redirectPath);
                   }, 600);
                 } catch (err) {
+                  setAuthError(err);
                   setErrorMsg(err.message || 'Google authentication error. Please try email sign-in.');
                 } finally {
                   setSubmitting(false);
@@ -126,7 +133,7 @@ export default function AccountAuth() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [signInWithGoogleCredential, navigate, redirectPath]);
+  }, [configuredGoogleClientId, signInWithGoogleCredential, navigate, redirectPath]);
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
@@ -143,7 +150,7 @@ export default function AccountAuth() {
         return;
       }
       setAuthError(err);
-      setErrorMsg(err?.message || 'Google sign-in could not complete. Please try again.');
+      setErrorMsg(err?.message || 'Google sign-in could not complete. Please try email sign-in.');
     } finally {
       setSubmitting(false);
     }
@@ -159,6 +166,8 @@ export default function AccountAuth() {
         }, 600);
       }
     } catch (err) {
+      console.warn('Google sign-in exception:', err);
+      // User dismissed or closed popup
       if (
         err?.code === 'auth/popup-closed-by-user' ||
         err?.code === 'auth/cancelled-popup-request' ||
@@ -166,8 +175,13 @@ export default function AccountAuth() {
       ) {
         return;
       }
+
       setAuthError(err);
-      setErrorMsg(err?.message || 'Google sign-in failed. Please use email or enable popups.');
+      setErrorMsg(
+        err?.code === 'auth/unauthorized-domain'
+          ? 'Google authentication domain restriction in this preview window. Any user can sign in or create an account with email below.'
+          : err?.message || 'Google sign-in encountered an issue. Please try signing in with email or opening in a full window.'
+      );
       throw err;
     }
   };
@@ -241,6 +255,32 @@ export default function AccountAuth() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+            {(isAdmin || isOwner || profile?.role === 'admin' || profile?.role === 'owner' || (user?.email && ['siyamisaba@gmail.com', 'admin@goalwear.com', 'ryantasinff@gmail.com'].includes(user.email.toLowerCase()))) && (
+              <div 
+                id="account-admin-portal-link"
+                onClick={() => navigate('/admin')}
+                className="glass-panel-hover" 
+                style={{ 
+                  padding: '20px', 
+                  borderRadius: '10px', 
+                  backgroundColor: 'rgba(0, 255, 136, 0.08)', 
+                  border: '1px solid var(--accent)', 
+                  cursor: 'pointer',
+                  boxShadow: '0 0 18px rgba(0, 255, 136, 0.2)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <ShieldCheck size={20} color="var(--accent)" />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                    Merchant Admin Portal
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#e2e8f0', margin: 0 }}>
+                  Manage store orders, verify bKash payments, update tracking, and control live inventory.
+                </p>
+              </div>
+            )}
+
             <div 
               onClick={() => navigate('/account/orders')}
               className="glass-panel-hover" 
@@ -292,19 +332,19 @@ export default function AccountAuth() {
           width: '100%',
         }}
       >
-        {/* Mode Toggles with Interactive Spark Effects */}
+        {/* Mode Toggles */}
         <div
           style={{
             display: 'flex',
             borderRadius: '12px',
             backgroundColor: 'rgba(0, 0, 0, 0.45)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             padding: '4px',
             marginBottom: '24px',
             gap: '4px',
           }}
         >
-          <InteractiveSparkButton
+          <button
             id="auth-tab-signin"
             type="button"
             onClick={() => {
@@ -312,29 +352,27 @@ export default function AccountAuth() {
               setAuthError(null);
               setErrorMsg('');
             }}
-            sparkColor="#00ff88"
-            secondaryColor="#ffd700"
             style={{
               flex: 1,
-              minHeight: '48px',
-              padding: '11px 0',
+              minHeight: '44px',
+              padding: '10px 0',
               borderRadius: '9px',
               border: 'none',
               background: mode === 'signin' ? 'var(--accent)' : 'transparent',
-              color: mode === 'signin' ? '#000000' : 'var(--text-secondary)',
+              color: mode === 'signin' ? '#000000' : '#94a3b8',
               fontWeight: 800,
               fontSize: '0.86rem',
-              letterSpacing: '0.03em',
-              textTransform: 'uppercase',
-              boxShadow: mode === 'signin' ? '0 0 16px rgba(0, 255, 136, 0.45)' : 'none',
+              letterSpacing: '0.02em',
+              cursor: 'pointer',
+              boxShadow: mode === 'signin' ? '0 0 16px rgba(0, 255, 136, 0.35)' : 'none',
               transition: 'all 0.2s ease',
               touchAction: 'manipulation',
             }}
           >
             Sign In
-          </InteractiveSparkButton>
+          </button>
 
-          <InteractiveSparkButton
+          <button
             id="auth-tab-signup"
             type="button"
             onClick={() => {
@@ -342,27 +380,25 @@ export default function AccountAuth() {
               setAuthError(null);
               setErrorMsg('');
             }}
-            sparkColor="#00ff88"
-            secondaryColor="#ffd700"
             style={{
               flex: 1,
-              minHeight: '48px',
-              padding: '11px 0',
+              minHeight: '44px',
+              padding: '10px 0',
               borderRadius: '9px',
               border: 'none',
               background: mode === 'signup' ? 'var(--accent)' : 'transparent',
-              color: mode === 'signup' ? '#000000' : 'var(--text-secondary)',
+              color: mode === 'signup' ? '#000000' : '#94a3b8',
               fontWeight: 800,
               fontSize: '0.86rem',
-              letterSpacing: '0.03em',
-              textTransform: 'uppercase',
-              boxShadow: mode === 'signup' ? '0 0 16px rgba(0, 255, 136, 0.45)' : 'none',
+              letterSpacing: '0.02em',
+              cursor: 'pointer',
+              boxShadow: mode === 'signup' ? '0 0 16px rgba(0, 255, 136, 0.35)' : 'none',
               transition: 'all 0.2s ease',
               touchAction: 'manipulation',
             }}
           >
             Create Account
-          </InteractiveSparkButton>
+          </button>
         </div>
 
         {/* Title & Subheading */}
@@ -372,33 +408,36 @@ export default function AccountAuth() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(0, 255, 136, 0.08)',
+              border: '1px solid rgba(0, 255, 136, 0.25)',
               color: '#00ff88',
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              marginBottom: '6px',
+              marginBottom: '10px',
             }}
           >
-            <Sparkles size={13} />
-            <span>Official GoalWear Portal</span>
+            <ShieldCheck size={13} />
+            <span>GoalWear Official Account</span>
           </div>
           <h2
             style={{
-              fontSize: '1.55rem',
+              fontSize: '1.6rem',
               fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.03em',
+              letterSpacing: '-0.02em',
               margin: '0 0 6px 0',
               color: '#ffffff',
             }}
           >
-            {mode === 'signin' ? 'Welcome Back' : 'Join The Squad'}
+            {mode === 'signin' ? 'Sign In to Your Account' : 'Create Your Account'}
           </h2>
           <p style={{ fontSize: '0.84rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
             {mode === 'signin'
-              ? 'Log in to track your squad jerseys, orders & VIP benefits'
-              : 'Create your account for expedited delivery & exclusive drops'}
+              ? 'Access your orders, match kit customization & real-time delivery updates'
+              : 'Register to unlock personalized jerseys, saved addresses & order tracking'}
           </p>
         </div>
 
@@ -435,41 +474,51 @@ export default function AccountAuth() {
           </div>
         )}
 
-        {/* Google Authentication Section with GSI and Mobile Support */}
+        {/* Google Authentication Section */}
         <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          {/* Native Google Identity Services Button Container */}
-          <div id="googleSignInBtnContainer" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}></div>
+          {/* Native Google Identity Services Button Container (only if custom Google Client ID is configured) */}
+          {configuredGoogleClientId && (
+            <div id="googleSignInBtnContainer" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}></div>
+          )}
 
-          {/* Interactive GoalWear Spark Button Fallback */}
-          <InteractiveSparkButton
+          {/* Clean Google Authentication Button */}
+          <button
             id="google-signin-spark-btn"
             type="button"
             onClick={handleGoogleSignIn}
             disabled={submitting}
-            sparkColor="#4285F4"
-            secondaryColor="#EA4335"
-            className="btn-premium"
             style={{
               width: '100%',
               minHeight: '48px',
               padding: '12px 16px',
               backgroundColor: '#ffffff',
-              color: '#0f172a',
-              border: 'none',
+              color: '#1e293b',
+              border: '1px solid #e2e8f0',
               borderRadius: '10px',
-              fontWeight: 800,
-              fontSize: '0.88rem',
+              fontWeight: 700,
+              fontSize: '0.9rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '10px',
+              gap: '12px',
+              cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.7 : 1,
-              boxShadow: '0 4px 15px rgba(0,0,0,0.35)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               transition: 'all 0.2s ease',
               touchAction: 'manipulation',
             }}
+            onMouseEnter={(e) => {
+              if (!submitting) {
+                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24">
+            <svg width="19" height="19" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -488,14 +537,14 @@ export default function AccountAuth() {
               />
             </svg>
             <span>Continue with Google</span>
-          </InteractiveSparkButton>
+          </button>
         </div>
 
         {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
-          <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.06em' }}>
-            or with email
+          <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.08em' }}>
+            or continue with email
           </span>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
         </div>
@@ -561,7 +610,7 @@ export default function AccountAuth() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 enterKeyHint="next"
-                placeholder="fan@example.com"
+                placeholder="name@example.com"
                 className="auth-input-field"
                 style={{
                   width: '100%',
@@ -675,50 +724,46 @@ export default function AccountAuth() {
             </div>
           </div>
 
-          {/* Interactive Submit Spark Button */}
-          <InteractiveSparkButton
+          {/* Submit Button */}
+          <button
             id="auth-submit-btn"
             type="submit"
             disabled={submitting}
-            sparkColor="#00ff88"
-            secondaryColor="#ffd700"
-            className="btn-premium"
             style={{
               width: '100%',
-              minHeight: '52px',
-              padding: '15px 0',
-              fontWeight: 900,
-              fontSize: '0.94rem',
+              minHeight: '50px',
+              padding: '14px 20px',
+              fontWeight: 800,
+              fontSize: '0.92rem',
               marginTop: '8px',
               borderRadius: '10px',
               backgroundColor: '#00ff88',
-              color: '#000000',
+              color: '#0a0f1d',
               border: 'none',
+              cursor: submitting ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
               opacity: submitting ? 0.7 : 1,
-              boxShadow: '0 0 25px rgba(0, 255, 136, 0.5)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
+              boxShadow: '0 4px 18px rgba(0, 255, 136, 0.35)',
+              letterSpacing: '0.02em',
               transition: 'all 0.2s ease',
-              touchAction: 'manipulation',
             }}
           >
-            <span>{submitting ? 'Authenticating...' : mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
+            <span>{submitting ? 'Please wait...' : mode === 'signin' ? 'Sign In to Account' : 'Create My Account'}</span>
             <ArrowRight size={18} strokeWidth={2.5} />
-          </InteractiveSparkButton>
+          </button>
         </form>
 
-        {/* Footnote badge */}
-        <div style={{ marginTop: '22px', textAlign: 'center' }}>
+        {/* Footnote security badge */}
+        <div style={{ marginTop: '24px', textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: '20px',
               backgroundColor: 'rgba(255, 255, 255, 0.04)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -727,7 +772,7 @@ export default function AccountAuth() {
             }}
           >
             <ShieldCheck size={14} color="#00ff88" />
-            <span>Secure Checkout with bKash Advance Delivery</span>
+            <span>256-Bit SSL Encrypted Connection • Verified Match Kits Only</span>
           </div>
         </div>
       </div>

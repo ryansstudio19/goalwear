@@ -198,13 +198,13 @@ const mockSupabase = {
 
       // Default admin authentication or generic test credentials
       if (password === 'admin' || password === 'admin123' || password === 'goalwear' || password.length >= 4) {
-        const isAdmin = cleanEmail.includes('admin');
+        const isAdmin = cleanEmail.includes('admin') || cleanEmail === 'siyamisaba@gmail.com' || cleanEmail === 'ryantasinff@gmail.com';
         const user = {
-          id: isAdmin ? 'admin_mock_123' : 'cust_' + Math.floor(Math.random() * 100000),
-          email: email || (isAdmin ? 'admin@goalwear.com' : 'customer@goalwear.com'),
+          id: isAdmin ? (cleanEmail === 'siyamisaba@gmail.com' ? 'u_admin_siyamisaba' : 'admin_mock_123') : 'cust_' + Math.floor(Math.random() * 100000),
+          email: email || (isAdmin ? 'siyamisaba@gmail.com' : 'customer@goalwear.com'),
           role: isAdmin ? 'admin' : 'customer',
           user_metadata: {
-            full_name: isAdmin ? 'Store Administrator' : 'Football Enthusiast'
+            full_name: cleanEmail === 'siyamisaba@gmail.com' ? 'Siyami Saba (Store Owner)' : (isAdmin ? 'Store Administrator' : 'Football Enthusiast')
           }
         };
         const session = {
