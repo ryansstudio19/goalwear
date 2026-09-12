@@ -40,49 +40,7 @@ export default function TrackOrder() {
 
     if (matchInContext) return matchInContext;
 
-    // 2. Check in localStorage directly (immediate sync before context state settles)
-    try {
-      const rawStored = localStorage.getItem('goalwear_supabase_orders');
-      if (rawStored) {
-        const storedOrders = JSON.parse(rawStored);
-        const matchInStorage = (storedOrders || []).find(o => {
-          const oid = (o.id || o.order_number || o.orderNumber || '').trim().toUpperCase();
-          const phone = (o.phone || o.shipping_phone || o.bkash_number || '').replace(/\D/g, '');
-          const txn = (o.bkash_txn_id || o.bkashTxnId || '').trim().toUpperCase();
-
-          return (
-            oid === cleanTarget ||
-            oid.replace(/^GW-/, '') === cleanTarget ||
-            cleanTarget.replace(/^GW-/, '') === oid ||
-            (cleanDigits && cleanDigits.length >= 10 && phone.includes(cleanDigits)) ||
-            (cleanTarget.length >= 4 && txn === cleanTarget)
-          );
-        });
-
-        if (matchInStorage) {
-          return {
-            id: matchInStorage.id || matchInStorage.order_number,
-            orderNumber: matchInStorage.order_number || matchInStorage.id,
-            date: matchInStorage.created_at || matchInStorage.date || new Date().toISOString(),
-            customerName: matchInStorage.shipping_name || matchInStorage.customer_name || 'Fan',
-            phone: matchInStorage.shipping_phone || matchInStorage.phone || '',
-            address: matchInStorage.shipping_address || matchInStorage.address || '',
-            city: matchInStorage.shipping_city || matchInStorage.city || 'Dhaka',
-            bkashNumber: matchInStorage.bkash_number,
-            bkashTxnId: matchInStorage.bkash_txn_id,
-            items: matchInStorage.items || [],
-            subtotal: Number(matchInStorage.subtotal || 0),
-            deliveryCharge: Number(matchInStorage.delivery_charge ?? 120),
-            total: Number(matchInStorage.total || 0),
-            status: matchInStorage.status || 'Pending verification'
-          };
-        }
-      }
-    } catch (storageErr) {
-      console.warn('TrackOrder storage fallback error:', storageErr);
-    }
-
-    // 3. Fallback direct query to Supabase if configured
+    // 2. Fallback direct query to Supabase if configured
     try {
       const { data, error } = await supabase
         .from('orders')

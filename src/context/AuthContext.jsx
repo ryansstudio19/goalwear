@@ -242,7 +242,9 @@ export const AuthProvider = ({ children }) => {
     // Wait slightly for the database trigger to create the profile, then fetch it
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    if (data?.user) {
+    // Only automatically log in if a session is returned.
+    // If Supabase has email confirmation enabled, data.session will be null.
+    if (data?.session && data?.user) {
       const userProfile = await fetchProfile(data.user);
       setUser(data.user);
       setProfile(userProfile);

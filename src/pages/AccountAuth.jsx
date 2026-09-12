@@ -5,6 +5,7 @@ import { User, Lock, Mail, Phone, ArrowRight, CheckCircle2, AlertCircle, Sparkle
 import KickoffVideoModal from '../components/KickoffVideoModal';
 import KickoffBackgroundVideo from '../components/KickoffBackgroundVideo';
 import AuthErrorMessage from '../components/AuthErrorMessage';
+import InteractiveSparkButton from '../components/InteractiveSparkButton';
 
 export default function AccountAuth() {
   const { user, profile, isAdmin, isOwner, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
@@ -205,11 +206,17 @@ export default function AccountAuth() {
           err.code = 'auth/missing-name';
           throw err;
         }
-        await signUp({ email, password, fullName, phone });
-        setSuccessMsg('Account registered successfully! Welcome to the squad.');
-        setTimeout(() => {
-          navigate(redirectPath);
-        }, 600);
+        const { session } = await signUp({ email, password, fullName, phone });
+        
+        if (!session) {
+          setSuccessMsg('Account registered successfully! Please check your email to verify your account.');
+          // Don't navigate, let them read the message
+        } else {
+          setSuccessMsg('Account registered successfully! Welcome to the squad.');
+          setTimeout(() => {
+            navigate(redirectPath);
+          }, 600);
+        }
       }
     } catch (err) {
       setAuthError(err);

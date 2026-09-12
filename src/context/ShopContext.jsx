@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { products as defaultProducts } from '../data/products';
 import { supabase } from '../supabaseClient';
-import { db, doc, setDoc, updateDoc, collection, getDocs, query, orderBy, deleteDoc, onSnapshot } from '../lib/firebase';
 
 export const ShopContext = createContext();
 
@@ -166,49 +165,11 @@ export const ShopContextProvider = ({ children }) => {
     paymentStatus: row.payment_status || 'PENDING_VERIFICATION'
   });
 
-  // Maps a Firestore document directly into the standard order model
-  const mapFirestoreToOrder = (docId, d) => {
-    const oId = d.orderNumber || d.order_number || d.id || docId;
-    const sub = Number(d.subtotal ?? (d.totalAmount ? d.totalAmount - (d.deliveryFee || 120) : (d.total ? d.total - 120 : 0)));
-    const deliv = Number(d.deliveryFee ?? d.deliveryCharge ?? d.delivery_charge ?? 120);
-    const tot = Number(d.totalAmount ?? d.total ?? (sub + deliv));
-
-    return {
-      id: oId,
-      orderNumber: oId,
-      customerId: d.customerId || d.customer_id || null,
-      date: d.createdAt || d.created_at || new Date().toISOString(),
-      customerName: d.customerName || d.shippingName || d.customer_name || d.shipping_name || 'Customer',
-      phone: d.phone || d.shippingPhone || d.shipping_phone || '',
-      address: d.address || d.shippingAddress || d.shipping_address || '',
-      city: d.city || d.shippingCity || d.shipping_city || 'Dhaka',
-      bkashNumber: d.bkashNumber || d.bkash_number || '',
-      bkashTxnId: d.bkashTxnId || d.bkashTrxId || d.bkash_txn_id || '',
-      items: Array.isArray(d.items) && d.items.length > 0 ? d.items : [
-        {
-          product: {
-            id: 'custom-order-item',
-            name: 'GoalWear Authenticated Kit',
-            price: sub > 0 ? sub : 3850,
-            image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop'
-          },
-          size: 'M',
-          quantity: 1
-        }
-      ],
-      subtotal: sub,
-      deliveryCharge: deliv,
-      total: tot,
-      status: normalizeOrderStatus(d.status),
-      paymentStatus: d.paymentStatus || d.payment_status || 'PENDING_VERIFICATION'
-    };
-  };
-
   const fetchOrders = async () => {
     setOrdersLoading(true);
     let combined = [];
 
-    // 1. Fetch from Supabase / mock orders storage
+    // Fetch from Supabase / mock orders storage
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -222,25 +183,6 @@ export const ShopContextProvider = ({ children }) => {
       console.warn('Orders fetch error from Supabase/storage:', err);
     }
 
-    // 2. Fetch live placed orders from Firestore
-    try {
-      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-      const snap = await getDocs(q);
-      snap.forEach((docSnap) => {
-        const d = docSnap.data();
-        const fbOrder = mapFirestoreToOrder(docSnap.id, d);
-        const existingIdx = combined.findIndex((o) => o.id === fbOrder.id);
-
-        if (existingIdx >= 0) {
-          combined[existingIdx] = { ...combined[existingIdx], ...fbOrder };
-        } else {
-          combined.push(fbOrder);
-        }
-      });
-    } catch (fbErr) {
-      console.warn('Firestore orders sync notice:', fbErr);
-    }
-
     // Sort newest orders first
     combined.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     setOrders(combined);
@@ -251,46 +193,12 @@ export const ShopContextProvider = ({ children }) => {
     // 1. Initial full fetch
     fetchOrders();
 
-    // 2. Realtime listener on Firestore: Any new order placed anywhere immediately reflects in the Admin Portal!
-    let unsubscribeFirestore = null;
-    try {
-      const ordersCol = collection(db, 'orders');
-      unsubscribeFirestore = onSnapshot(ordersCol, (snapshot) => {
-        if (!snapshot.empty) {
-          const liveOrders = [];
-          snapshot.forEach((docSnap) => {
-            liveOrders.push(mapFirestoreToOrder(docSnap.id, docSnap.data()));
-          });
-          liveOrders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-          setOrders((prev) => {
-            const map = new Map();
-            // Put latest live Firestore orders
-            liveOrders.forEach((o) => map.set(o.id, o));
-            // Keep any local orders not yet in Firestore
-            (prev || []).forEach((o) => {
-              if (!map.has(o.id)) map.set(o.id, o);
-            });
-            const merged = Array.from(map.values());
-            merged.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-            return merged;
-          });
-          setOrdersLoading(false);
-        }
-      }, (err) => {
-        console.warn('Firestore real-time orders listener notice:', err);
-      });
-    } catch (e) {
-      console.warn('Failed setting up orders real-time snapshot:', e);
-    }
-
-    // 3. Refetch whenever auth state changes (e.g. admin logs in/out)
+    // 2. Refetch whenever Supabase auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       fetchOrders();
     });
 
     return () => {
-      if (unsubscribeFirestore) unsubscribeFirestore();
       authListener?.subscription?.unsubscribe();
     };
   }, []);
@@ -649,7 +557,7 @@ export const ShopContextProvider = ({ children }) => {
         subtotal,
         delivery_charge: deliveryCharge,
         total,
-        status: 'Pending verification',
+        status: 'PENDING',
         payment_status: 'PENDING_VERIFICATION',
         created_at: new Date().toISOString()
       };
@@ -664,37 +572,6 @@ export const ShopContextProvider = ({ children }) => {
       }
     }
 
-    // Synchronize placed order into Firebase Firestore so the Admin Portal on ANY device receives it instantly!
-    try {
-      await setDoc(doc(db, 'orders', finalOrderId), {
-        id: finalOrderId,
-        orderNumber: finalOrderId,
-        order_number: finalOrderId,
-        customerId: customerDetails.customerId || 'guest',
-        customerName: customerDetails.name,
-        shippingName: customerDetails.name,
-        phone: customerDetails.phone,
-        address: customerDetails.address,
-        city: customerDetails.city || 'Dhaka',
-        items: itemsForStorage,
-        subtotal: subtotal,
-        deliveryFee: deliveryCharge,
-        deliveryCharge: deliveryCharge,
-        totalAmount: total,
-        total: total,
-        status: 'Pending verification',
-        paymentStatus: 'PENDING_VERIFICATION',
-        paymentMethod: 'Cash on Delivery (bKash Adv)',
-        bkashNumber: customerDetails.bkashNumber || '',
-        bkashTxnId: customerDetails.bkashTxnId || '',
-        bkashTrxId: customerDetails.bkashTxnId || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (fbErr) {
-      console.error('[GoalWear Firebase] Firestore sync error:', fbErr);
-    }
-
     // Refresh orders in context
     await fetchOrders();
 
@@ -703,7 +580,7 @@ export const ShopContextProvider = ({ children }) => {
     return finalOrderId;
   };
 
-  // Admin Verification Panel operations - updates Supabase & Firestore in real-time
+  // Admin Verification Panel operations - updates Supabase in real-time
   const updateOrderStatus = async (orderId, newStatus) => {
     // Canonicalize status
     const canonicalStatus = normalizeOrderStatus(newStatus);
@@ -728,16 +605,6 @@ export const ShopContextProvider = ({ children }) => {
     } catch (err) {
       console.warn('Supabase status update note:', err);
     }
-
-    // Update in Firebase Firestore so customer and other admin devices see the status change immediately
-    try {
-      await setDoc(doc(db, 'orders', orderId), {
-        status: canonicalStatus,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (fbErr) {
-      console.warn('Firestore status update error:', fbErr);
-    }
   };
 
   const deleteOrder = async (orderId) => {
@@ -746,11 +613,6 @@ export const ShopContextProvider = ({ children }) => {
       await supabase.from('orders').delete().eq('id', orderId);
     } catch (err) {
       console.error('Failed to delete order from Supabase/storage:', err);
-    }
-    try {
-      await deleteDoc(doc(db, 'orders', orderId));
-    } catch (fbErr) {
-      console.warn('Failed to delete order from Firestore:', fbErr);
     }
   };
 

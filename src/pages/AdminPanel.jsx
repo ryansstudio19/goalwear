@@ -60,7 +60,6 @@ export default function AdminPanel() {
     isAdmin: isAuthAdmin, 
     isOwner: isAuthOwner, 
     signIn: authSignIn, 
-    signInAsGoogleUser, 
     signOut: authSignOut 
   } = useAuth();
 
@@ -88,28 +87,6 @@ export default function AdminPanel() {
 
   // Check auth session
   useEffect(() => {
-    // 1. If user is already logged in via AuthContext with admin permissions
-    if (isCurrentUserAdmin && authUser) {
-      const activeAdminSess = {
-        user: {
-          id: authUser.id,
-          email: authUser.email,
-          role: 'admin',
-          user_metadata: {
-            full_name: authProfile?.full_name || authProfile?.fullName || authUser.email
-          }
-        },
-        access_token: 'gw_admin_' + Date.now()
-      };
-      setSession(activeAdminSess);
-      setCheckingSession(false);
-      try {
-        localStorage.setItem('goalwear_admin_session', JSON.stringify(activeAdminSess));
-      } catch {}
-      return;
-    }
-
-    // 2. Otherwise check Supabase / mock storage session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session);
@@ -119,10 +96,11 @@ export default function AdminPanel() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (newSession) setSession(newSession);
+      else setSession(null);
     });
 
     return () => listener?.subscription?.unsubscribe();
-  }, [isCurrentUserAdmin, authUser, authProfile]);
+  }, []);
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
@@ -130,100 +108,12 @@ export default function AdminPanel() {
     setLoggingIn(true);
 
     const cleanEmail = email.trim().toLowerCase();
-    const isMasterAdmin = ['siyamisaba@gmail.com', 'ryantasinff@gmail.com', 'admin@goalwear.com'].includes(cleanEmail);
 
     try {
-      // 1. Try AuthContext sign in first
-      try {
-        await authSignIn({ email: cleanEmail, password });
-      } catch (authErr) {
-        // If master admin using quick password bypass
-        if (isMasterAdmin && ['admin', 'admin123', 'goalwear', '123456'].includes(password)) {
-          await signInAsGoogleUser(cleanEmail, cleanEmail === 'siyamisaba@gmail.com' ? 'Siyami Saba' : 'Store Administrator');
-        } else {
-          throw authErr;
-        }
-      }
-
-      // 2. Synchronize Supabase mock auth session
-      const { data: supData, error: supErr } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-      if (supData?.session) {
-        setSession(supData.session);
-      } else if (isMasterAdmin) {
-        const adminSess = {
-          user: {
-            id: 'admin_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
-            email: cleanEmail,
-            role: 'admin',
-            user_metadata: {
-              full_name: cleanEmail === 'siyamisaba@gmail.com' ? 'Siyami Saba (Store Owner)' : 'Store Administrator'
-            }
-          },
-          access_token: 'gw_admin_' + Date.now()
-        };
-        setSession(adminSess);
-        try {
-          localStorage.setItem('goalwear_admin_session', JSON.stringify(adminSess));
-        } catch {}
-      }
-
+      await authSignIn({ email: cleanEmail, password });
       refetchOrders();
     } catch (err) {
-      setLoginError(err.message || 'Invalid email or password. You can use one-click admin sign in.');
-    } finally {
-      setLoggingIn(false);
-    }
-  };
-
-  const handleQuickOwnerLogin = async () => {
-    setLoggingIn(true);
-    setLoginError('');
-    try {
-      await signInAsGoogleUser('siyamisaba@gmail.com', 'Siyami Saba');
-      await supabase.auth.signInWithPassword({
-        email: 'siyamisaba@gmail.com',
-        password: 'admin123'
-      });
-      const ownerSess = {
-        user: {
-          id: 'u_admin_siyamisaba',
-          email: 'siyamisaba@gmail.com',
-          role: 'admin',
-          user_metadata: {
-            full_name: 'Siyami Saba (Store Owner)'
-          }
-        },
-        access_token: 'gw_owner_' + Date.now()
-      };
-      setSession(ownerSess);
-      try {
-        localStorage.setItem('goalwear_admin_session', JSON.stringify(ownerSess));
-      } catch {}
-      refetchOrders();
-    } catch (err) {
-      setLoginError('Could not initialize owner session: ' + err.message);
-    } finally {
-      setLoggingIn(false);
-    }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    setEmail('admin@goalwear.com');
-    setPassword('admin123');
-    setLoggingIn(true);
-    setLoginError('');
-    try {
-      await signInAsGoogleUser('admin@goalwear.com', 'Store Administrator');
-      const { data } = await supabase.auth.signInWithPassword({
-        email: 'admin@goalwear.com',
-        password: 'admin123'
-      });
-      if (data?.session) {
-        setSession(data.session);
-      }
-      refetchOrders();
-    } catch (err) {
-      setLoginError(err.message);
+      setLoginError(err.message || 'Invalid email or password.');
     } finally {
       setLoggingIn(false);
     }
@@ -392,79 +282,6 @@ export default function AdminPanel() {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '24px' }}>
             Secure order fulfillment, bKash transactions audit, and live jersey inventory controls.
           </p>
-
-          {/* Quick Access Credentials Box */}
-          <div
-            style={{
-              backgroundColor: 'rgba(0, 255, 136, 0.05)',
-              border: '1px solid rgba(0, 255, 136, 0.3)',
-              borderRadius: '10px',
-              padding: '16px',
-              marginBottom: '20px',
-              fontSize: '0.82rem'
-            }}
-          >
-            <div style={{ color: 'var(--accent)', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldCheck size={16} />
-              <span>Verified Store Administrators</span>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={handleQuickOwnerLogin}
-                disabled={loggingIn}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(0, 255, 136, 0.15)',
-                  border: '1px solid var(--accent)',
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                <ShieldCheck size={16} color="var(--accent)" />
-                <span>Enter as siyamisaba@gmail.com (Store Owner)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleQuickDemoLogin}
-                disabled={loggingIn}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border-glass)',
-                  color: 'var(--text-secondary)',
-                  fontWeight: 600,
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>Demo Admin (admin@goalwear.com / admin123)</span>
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-glass)' }} />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or sign in with password</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-glass)' }} />
-          </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>

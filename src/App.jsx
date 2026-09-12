@@ -55,13 +55,13 @@ export default function App() {
   // Secret Owner Access Shortcut: Ctrl + Shift + A (or Cmd + Shift + A)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a' || e.code === 'KeyA')) {
         e.preventDefault();
         navigate('/admin');
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [navigate]);
 
   const isAdminRoute = location.pathname.startsWith('/admin');

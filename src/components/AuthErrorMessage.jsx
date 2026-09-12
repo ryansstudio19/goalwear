@@ -20,7 +20,7 @@ import {
   Info,
   Sparkles
 } from 'lucide-react';
-import { formatAuthError } from '../utils/firebaseAuthErrorMap';
+import { formatAuthError } from '../utils/authErrorMap';
 
 /**
  * Dynamic icon selector for Firebase Auth error categories
