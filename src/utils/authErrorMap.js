@@ -1,10 +1,10 @@
 /**
- * GoalWear Centralized Firebase Auth Error Handler & Mapping Utility
- * Translates technical Firebase Auth & Firestore error codes into human-readable,
+ * GoalWear Centralized Auth Error Handler & Mapping Utility
+ * Translates technical error codes into human-readable,
  * actionable instructions for users during sign-up and authentication workflows.
  */
 
-export const FIREBASE_AUTH_ERROR_MAP = {
+export const AUTH_ERROR_MAP = {
   // --- SIGN-UP SPECIFIC ERRORS ---
   'auth/email-already-in-use': {
     code: 'auth/email-already-in-use',
@@ -329,8 +329,8 @@ export function formatAuthError(error, contextMode = 'signup') {
 
   const code = extractAuthErrorCode(error);
 
-  if (code && FIREBASE_AUTH_ERROR_MAP[code]) {
-    const template = FIREBASE_AUTH_ERROR_MAP[code];
+  if (code && AUTH_ERROR_MAP[code]) {
+    const template = AUTH_ERROR_MAP[code];
     return {
       ...template,
       rawMessage,
@@ -360,3 +360,5 @@ export function formatAuthError(error, contextMode = 'signup') {
     rawMessage,
   };
 }
+
+export const FIREBASE_AUTH_ERROR_MAP = AUTH_ERROR_MAP;
