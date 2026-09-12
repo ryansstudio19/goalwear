@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { firebaseConfig } from '../lib/firebase';
 import { User, Lock, Mail, Phone, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Film, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import KickoffVideoModal from '../components/KickoffVideoModal';
 import KickoffBackgroundVideo from '../components/KickoffBackgroundVideo';
@@ -65,8 +64,8 @@ export default function AccountAuth() {
 
   const redirectPath = new URLSearchParams(location.search).get('redirect') || '/account';
 
-  // Mount Google Identity Services Button using configured Google Client ID from env or firebaseConfig
-  const configuredGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || firebaseConfig?.oAuthClientId;
+  // Mount Google Identity Services Button using configured Google Client ID from env
+  const configuredGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     let timer;
@@ -255,32 +254,6 @@ export default function AccountAuth() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {(isAdmin || isOwner || profile?.role === 'admin' || profile?.role === 'owner' || (user?.email && ['siyamisaba@gmail.com', 'admin@goalwear.com', 'ryantasinff@gmail.com'].includes(user.email.toLowerCase()))) && (
-              <div 
-                id="account-admin-portal-link"
-                onClick={() => navigate('/admin')}
-                className="glass-panel-hover" 
-                style={{ 
-                  padding: '20px', 
-                  borderRadius: '10px', 
-                  backgroundColor: 'rgba(0, 255, 136, 0.08)', 
-                  border: '1px solid var(--accent)', 
-                  cursor: 'pointer',
-                  boxShadow: '0 0 18px rgba(0, 255, 136, 0.2)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <ShieldCheck size={20} color="var(--accent)" />
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                    Merchant Admin Portal
-                  </h3>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: '#e2e8f0', margin: 0 }}>
-                  Manage store orders, verify bKash payments, update tracking, and control live inventory.
-                </p>
-              </div>
-            )}
-
             <div 
               onClick={() => navigate('/account/orders')}
               className="glass-panel-hover" 
@@ -441,7 +414,7 @@ export default function AccountAuth() {
           </p>
         </div>
 
-        {/* Centralized Firebase Auth Error Message Component */}
+        {/* Centralized Auth Error Message Component */}
         <AuthErrorMessage
           id="auth-main-error-alert"
           error={authError || errorMsg}
@@ -788,4 +761,3 @@ export default function AccountAuth() {
     </KickoffBackgroundVideo>
   );
 }
-
