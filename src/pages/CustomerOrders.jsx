@@ -9,7 +9,6 @@ export default function CustomerOrders() {
   const { user, profile } = useAuth();
   const { orders: contextOrders } = useContext(ShopContext);
   const navigate = useNavigate();
-
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -19,12 +18,10 @@ export default function CustomerOrders() {
       navigate('/account/login?redirect=/account/orders');
       return;
     }
-
     const fetchCustomerOrders = async () => {
       setLoading(true);
       try {
         let matched = [];
-        // Match from ShopContext first (which has live Firestore + Supabase orders)
         if (Array.isArray(contextOrders)) {
           matched = contextOrders.filter(o => 
             (user?.id && o.customerId === user.id) ||
@@ -32,49 +29,39 @@ export default function CustomerOrders() {
             (profile?.full_name && o.customerName && o.customerName.toLowerCase() === profile.full_name.toLowerCase())
           );
         }
-
+        
         const { data, error } = await supabase
           .from('orders')
-          .select(`
-            *,
-            order_items (*),
-            order_status_history (*)
-          `)
-          .eq('customer_id', user.id)
+          .select('*, order_items(*)')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-
-        if (!error && Array.isArray(data)) {
-          data.forEach(dbOrder => {
-            const id = dbOrder.order_number || dbOrder.id;
-            const exists = matched.some(m => m.id === id);
-            if (!exists) matched.push(dbOrder);
-          });
+          
+        if (!error && data && data.length > 0) {
+          setOrders(data);
+        } else {
+          setOrders(matched);
         }
-
-        setOrders(matched);
       } catch (err) {
-        console.error('Failed to load orders:', err);
+        console.error("Order fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchCustomerOrders();
   }, [user, profile, contextOrders, navigate]);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
+  const getStatusBadge = (status = '') => {
+    switch (status.toUpperCase()) {
       case 'DELIVERED':
-      case 'Delivered':
-        return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: '#10b981' };
+      case 'COMPLETED':
+        return { bg: 'rgba(0, 255, 136, 0.15)', text: '#00ff88', border: '#00ff88' };
       case 'SHIPPED':
       case 'OUT_FOR_DELIVERY':
-      case 'Shipped':
         return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: '#3b82f6' };
       case 'PROCESSING':
       case 'PACKED':
       case 'CONFIRMED':
-      case 'bKash Verified':
+      case 'BKASH VERIFIED':
         return { bg: 'rgba(0, 255, 136, 0.15)', text: 'var(--accent)', border: 'var(--accent)' };
       case 'CANCELLED':
       case 'REFUNDED':
@@ -85,32 +72,11 @@ export default function CustomerOrders() {
   };
 
   return (
-    <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px', maxWidth: '960px' }}>
+    <div className="fade-in">
+      <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0 0 24px 0', color: 'white' }}>
+        Order History
+      </h2>
       
-      {/* Breadcrumb / Back */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <button
-          onClick={() => navigate('/account')}
-          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Account</span>
-        </button>
-
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Logged in as <strong style={{ color: 'white' }}>{user?.email}</strong>
-        </span>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 6px 0' }}>
-          My Orders & History
-        </h1>
-        <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Track real-time shipment status, review purchased jersey sizes, and inspect delivery milestones.
-        </p>
-      </div>
-
       {loading ? (
         <div className="glass-panel" style={{ padding: '40px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>Loading your orders from database...</p>
@@ -136,10 +102,8 @@ export default function CustomerOrders() {
             const badge = getStatusBadge(order.status);
             const orderNum = order.order_number || order.id;
             const itemsCount = order.order_items?.length || (Array.isArray(order.items) ? order.items.length : 1);
-            const formattedDate = new Date(order.created_at || order.date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
+            const formattedDate = new Date(order.created_at || order.date || Date.now()).toLocaleDateString('en-US', {
+              year: 'numeric', month: 'short', day: 'numeric'
             });
 
             return (
@@ -157,19 +121,11 @@ export default function CustomerOrders() {
                       Placed on {formattedDate}
                     </span>
                   </div>
-
                   <span style={{
-                    backgroundColor: badge.bg,
-                    color: badge.text,
-                    border: `1px solid ${badge.border}`,
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    backgroundColor: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase'
                   }}>
-                    {order.status}
+                    {order.status || 'PENDING'}
                   </span>
                 </div>
 
@@ -179,10 +135,9 @@ export default function CustomerOrders() {
                       Total Amount: <strong style={{ color: 'white', fontSize: '1rem' }}>৳{order.total}</strong> ({itemsCount} {itemsCount === 1 ? 'item' : 'items'})
                     </p>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Recipient: {order.shipping_name || order.customer_name} • {order.shipping_phone || order.phone}
+                      Recipient: {order.shipping_name || order.customer_name || 'Customer'} • {order.shipping_phone || order.phone || ''}
                     </p>
                   </div>
-
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                       onClick={() => navigate(`/track-order?id=${encodeURIComponent(orderNum)}`)}
@@ -192,7 +147,6 @@ export default function CustomerOrders() {
                       <Truck size={14} />
                       <span>Track Shipment</span>
                     </button>
-
                     <button
                       onClick={() => setSelectedOrder(selectedOrder?.id === order.id ? null : order)}
                       className="btn-premium btn-secondary-glass"
@@ -204,19 +158,18 @@ export default function CustomerOrders() {
                   </div>
                 </div>
 
-                {/* Expanded Order Inspector */}
                 {selectedOrder?.id === order.id && (
                   <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-glass)', animation: 'fade-in 0.2s ease' }}>
                     <h4 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', margin: '0 0 12px 0', color: 'var(--accent)' }}>
                       Order Items Breakdown
                     </h4>
-
+                    
                     {order.order_items && order.order_items.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                         {order.order_items.map((item) => (
                           <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '6px' }}>
                             <span><strong>{item.quantity}x</strong> {item.product_name} (Size: {item.variant_size})</span>
-                            <span style={{ fontWeight: 700 }}>৳{item.total_price}</span>
+                            <span style={{ fontWeight: 700 }}>৳{item.total_price || (item.price * item.quantity)}</span>
                           </div>
                         ))}
                       </div>
@@ -224,21 +177,21 @@ export default function CustomerOrders() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                         {order.items.map((it, idx) => (
                           <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '6px' }}>
-                            <span><strong>{it.quantity}x</strong> {it.product?.name || 'Jersey'} (Size: {it.size})</span>
-                            <span style={{ fontWeight: 700 }}>৳{(it.product?.price || 0) * it.quantity}</span>
+                            <span><strong>{it.quantity}x</strong> {it.product?.name || it.name || 'Jersey'} (Size: {it.size || it.variant_size || 'N/A'})</span>
+                            <span style={{ fontWeight: 700 }}>৳{(it.product?.price || it.price || 0) * it.quantity}</span>
                           </div>
                         ))}
                       </div>
                     ) : null}
-
+                    
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', fontSize: '0.82rem', backgroundColor: 'rgba(0,0,0,0.3)', padding: '14px', borderRadius: '8px' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)', display: 'block' }}>Delivery Address:</span>
                         <span style={{ color: 'white' }}>{order.shipping_address || order.address}</span>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--text-muted)', display: 'block' }}>bKash Verification:</span>
-                        <span style={{ color: 'white' }}>Sender: {order.bkash_number || 'N/A'} • TxnID: {order.bkash_txn_id || 'N/A'}</span>
+                        <span style={{ color: 'var(--text-muted)', display: 'block' }}>Payment:</span>
+                        <span style={{ color: 'white' }}>{order.payment_method || 'Cash on Delivery'}</span>
                       </div>
                       {order.tracking_number && (
                         <div>

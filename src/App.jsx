@@ -28,6 +28,7 @@ import Confirmation from './pages/Confirmation';
 import ProductDetails from './pages/ProductDetails';
 import AdminPanel from './pages/AdminPanel';
 import AccountAuth from './pages/AccountAuth';
+import AccountDashboard from './pages/AccountDashboard';
 import CustomerOrders from './pages/CustomerOrders';
 
 // ScrollToTop on path or search param change
@@ -123,9 +124,8 @@ export default function App() {
           <Route path="/returns" element={<Navigate to="/return-policy" replace />} />
           
           {/* Customer Account & Order History */}
-          <Route path="/account" element={<AccountAuth />} />
+          <Route path="/account/*" element={<AccountDashboard />} />
           <Route path="/account/login" element={<AccountAuth />} />
-          <Route path="/account/orders" element={<CustomerOrders />} />
           <Route path="/orders" element={<Navigate to="/account/orders" replace />} />
           
           {/* Dedicated Admin Portal - Protected by Supabase Auth */}

@@ -11,6 +11,12 @@ export default function AccountAuth() {
   const { user, profile, isAdmin, isOwner, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => {
+    if (user && !loading) {
+      const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/account';
+      navigate(redirectUrl, { replace: true });
+    }
+  }, [user, loading, navigate, location.search]);
 
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail] = useState('');
@@ -228,71 +234,11 @@ export default function AccountAuth() {
 
   // If already logged in, show customer profile hub
   if (user) {
+    // If logged in, send them to the account dashboard
+    const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/account';
     return (
-      <div className="container-custom" style={{ paddingTop: '40px', paddingBottom: '80px', maxWidth: '800px' }}>
-        <div className="glass-panel" style={{ padding: '32px', border: '1px solid var(--border-glass-hover)', boxShadow: '0 10px 40px rgba(0,0,0,0.6)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '20px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '54px', height: '54px', borderRadius: '50%', backgroundColor: 'rgba(0, 255, 136, 0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', fontWeight: 800, fontSize: '1.4rem' }}>
-                {profile?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: 800, textTransform: 'uppercase', margin: 0 }}>
-                  {profile?.full_name || 'GoalWear Member'}
-                </h1>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  {user.email} • <span style={{ color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700 }}>{profile?.role || 'Customer'}</span>
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <InteractiveSparkButton
-                onClick={async () => {
-                  await signOut();
-                  navigate('/account/login');
-                }}
-                className="btn-premium btn-secondary-glass"
-                style={{ padding: '8px 18px', fontSize: '0.82rem', borderRadius: '8px' }}
-              >
-                Sign Out
-              </InteractiveSparkButton>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <div 
-              onClick={() => navigate('/account/orders')}
-              className="glass-panel-hover" 
-              style={{ padding: '20px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
-            >
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 8px 0', color: 'white' }}>My Orders</h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
-                View your order history, delivery milestones, and invoices.
-              </p>
-            </div>
-
-            <div 
-              onClick={() => navigate('/cart')}
-              className="glass-panel-hover" 
-              style={{ padding: '20px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
-            >
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 8px 0', color: 'white' }}>Current Bag</h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
-                Check items in your cart ready for bKash delivery confirmation.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Kickoff Video Modal for replaying full cinematic */}
-        <KickoffVideoModal
-          isOpen={showKickoffModal}
-          onClose={() => setShowKickoffModal(false)}
-          onComplete={() => setShowKickoffModal(false)}
-          userProfile={profile}
-          mode={kickoffTriggerMode}
-        />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
+         <p style={{ color: 'var(--text-muted)' }}>Redirecting to your account...</p>
       </div>
     );
   }
