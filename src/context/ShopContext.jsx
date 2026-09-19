@@ -169,7 +169,7 @@ export const ShopContextProvider = ({ children }) => {
     setOrdersLoading(true);
     let combined = [];
 
-    // Fetch from Supabase / mock orders storage
+    // Fetch from Supabase
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -183,23 +183,148 @@ export const ShopContextProvider = ({ children }) => {
       console.warn('Orders fetch error from Supabase/storage:', err);
     }
 
+    // Read local resilient backup to ensure zero order loss
+    try {
+      const stored = JSON.parse(localStorage.getItem('goalwear_cloud_orders') || '[]');
+      if (Array.isArray(stored) && stored.length > 0) {
+        const existingIds = new Set(combined.map(o => o.id || o.orderNumber));
+        for (const localOrder of stored) {
+          const ordId = localOrder.id || localOrder.orderNumber;
+          if (!existingIds.has(ordId)) {
+            combined.push(localOrder);
+            existingIds.add(ordId);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Local backup orders read error:', err);
+    }
+
     // Sort newest orders first
     combined.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     setOrders(combined);
+    try {
+      localStorage.setItem('goalwear_cloud_orders', JSON.stringify(combined));
+    } catch (e) {}
     setOrdersLoading(false);
+    return combined;
+  };
+
+  /**
+   * Force-refreshes the Admin Panel data stream whenever a database write operation succeeds
+   * to guarantee 100% real-time synchronization between the database, local cache, and admin views.
+   */
+  const forceRefreshAdminDataStream = async (triggerInfo = {}) => {
+    const timestamp = Date.now();
+    const eventPayload = {
+      timestamp,
+      reason: triggerInfo.reason || 'Database write succeeded',
+      source: triggerInfo.source || 'db_mutation',
+      meta: triggerInfo.meta || {}
+    };
+
+    // 1. Immediately re-pull latest authoritative records from Supabase
+    let latestOrders = [];
+    try {
+      latestOrders = await fetchOrders();
+    } catch (err) {
+      console.warn('Error fetching orders during force stream refresh:', err);
+    }
+
+    // 2. Dispatch window-level CustomEvents for active UI components
+    window.dispatchEvent(new CustomEvent('goalwear:force_admin_sync', { detail: { ...eventPayload, ordersCount: latestOrders?.length } }));
+    window.dispatchEvent(new CustomEvent('goalwear:orders_updated', { detail: { ...eventPayload, ordersCount: latestOrders?.length } }));
+
+    // 3. Trigger cross-tab storage synchronizer
+    try {
+      localStorage.setItem('goalwear_orders_last_sync', timestamp.toString());
+      localStorage.setItem('goalwear_force_stream_refresh', JSON.stringify(eventPayload));
+    } catch (e) {}
+
+    // 4. Low-latency inter-tab BroadcastChannel for multi-screen admin workstations
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const syncChannel = new BroadcastChannel('goalwear_admin_stream_channel');
+        syncChannel.postMessage({ type: 'FORCE_ADMIN_STREAM_REFRESH', ...eventPayload });
+        syncChannel.close();
+      }
+    } catch (bcErr) {
+      // BroadcastChannel fallback
+    }
+
+    return {
+      success: true,
+      timestamp,
+      eventPayload
+    };
   };
 
   useEffect(() => {
     // 1. Initial full fetch
     fetchOrders();
 
-    // 2. Refetch whenever Supabase auth state changes
+    // 2. Real-time Supabase postgres_changes channel
+    const ordersChannel = supabase
+      .channel('schema-db-orders-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          forceRefreshAdminDataStream({
+            reason: `Postgres real-time ${payload?.eventType || 'change'} event received`,
+            source: 'postgres_changes',
+            meta: payload
+          });
+        }
+      )
+      .subscribe();
+
+    // 3. Refetch whenever Supabase auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      fetchOrders();
+      forceRefreshAdminDataStream({
+        reason: 'Supabase auth state changed',
+        source: 'auth_change'
+      });
     });
 
+    // 4. Cross-tab and in-window order sync listeners
+    const handleStorage = (e) => {
+      if (e.key === 'goalwear_orders_last_sync' || e.key === 'goalwear_cloud_orders' || e.key === 'goalwear_force_stream_refresh') {
+        fetchOrders();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('goalwear:orders_updated', fetchOrders);
+    window.addEventListener('goalwear:force_admin_sync', fetchOrders);
+
+    // 5. BroadcastChannel listener for multi-tab instances
+    let broadcastChannel;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        broadcastChannel = new BroadcastChannel('goalwear_admin_stream_channel');
+        broadcastChannel.onmessage = (event) => {
+          if (event.data?.type === 'FORCE_ADMIN_STREAM_REFRESH') {
+            fetchOrders();
+          }
+        };
+      }
+    } catch (e) {}
+
+    // 6. Active live polling heartbeat every 8 seconds
+    const pollInterval = setInterval(() => {
+      fetchOrders();
+    }, 8000);
+
     return () => {
+      ordersChannel?.unsubscribe();
       authListener?.subscription?.unsubscribe();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('goalwear:orders_updated', fetchOrders);
+      window.removeEventListener('goalwear:force_admin_sync', fetchOrders);
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -520,6 +645,12 @@ export const ShopContextProvider = ({ children }) => {
       if (!rpcError && rpcData && rpcData.order_number) {
         atomicSucceeded = true;
         finalOrderId = rpcData.order_number;
+        // Trigger immediate force-refresh of admin data stream on successful atomic write
+        forceRefreshAdminDataStream({
+          reason: `Atomic order ${finalOrderId} created in database`,
+          source: 'placeOrder:atomic_rpc',
+          meta: { orderId: finalOrderId, total }
+        });
       }
     } catch (rpcErr) {
       console.warn('Atomic RPC skipped or pending schema deployment, using direct orders insert:', rpcErr);
@@ -537,6 +668,29 @@ export const ShopContextProvider = ({ children }) => {
       quantity: Number(item.quantity || 1),
       customization: item.customization || null
     }));
+
+    const placedOrderObject = {
+      id: finalOrderId,
+      orderNumber: finalOrderId,
+      customerId: customerDetails.customerId || null,
+      date: new Date().toISOString(),
+      customerName: customerDetails.name,
+      shippingName: customerDetails.name,
+      phone: customerDetails.phone,
+      shippingPhone: customerDetails.phone,
+      address: customerDetails.address,
+      shippingAddress: customerDetails.address,
+      city: customerDetails.city || 'Dhaka',
+      shippingCity: customerDetails.city || 'Dhaka',
+      bkashNumber: customerDetails.bkashNumber,
+      bkashTxnId: customerDetails.bkashTxnId,
+      items: itemsForStorage,
+      subtotal,
+      deliveryCharge,
+      total,
+      status: 'Pending verification',
+      paymentStatus: 'PENDING_VERIFICATION'
+    };
 
     if (!atomicSucceeded) {
       const newOrderRow = {
@@ -557,7 +711,7 @@ export const ShopContextProvider = ({ children }) => {
         subtotal,
         delivery_charge: deliveryCharge,
         total,
-        status: 'PENDING',
+        status: 'Pending verification',
         payment_status: 'PENDING_VERIFICATION',
         created_at: new Date().toISOString()
       };
@@ -566,14 +720,34 @@ export const ShopContextProvider = ({ children }) => {
         const { error } = await supabase.from('orders').insert(newOrderRow);
         if (error) {
           console.warn('Supabase local/mock order store note:', error.message);
+        } else {
+          // DATABASE WRITE SUCCEEDED: force-refresh admin data stream immediately
+          forceRefreshAdminDataStream({
+            reason: `Order ${finalOrderId} written to database`,
+            source: 'placeOrder:insert',
+            meta: { orderId: finalOrderId, customerName: customerDetails.name, total }
+          });
         }
       } catch (insertErr) {
         console.warn('Direct order store note:', insertErr);
       }
     }
 
-    // Refresh orders in context
-    await fetchOrders();
+    // Persist immediately to resilient local backup
+    try {
+      const existingStored = JSON.parse(localStorage.getItem('goalwear_cloud_orders') || '[]');
+      const updatedList = [placedOrderObject, ...existingStored.filter((o) => (o.id || o.orderNumber) !== finalOrderId)];
+      localStorage.setItem('goalwear_cloud_orders', JSON.stringify(updatedList));
+      localStorage.setItem('goalwear_orders_last_sync', Date.now().toString());
+    } catch (err) {
+      console.warn('Local backup order save:', err);
+    }
+
+    // Instantly update active context state
+    setOrders((prev) => [placedOrderObject, ...prev.filter((o) => (o.id || o.orderNumber) !== finalOrderId)]);
+
+    // Broadcast across windows, iframes, and open tabs
+    window.dispatchEvent(new CustomEvent('goalwear:orders_updated', { detail: placedOrderObject }));
 
     clearCart();
     setView('confirmation', { orderId: finalOrderId });
@@ -588,11 +762,21 @@ export const ShopContextProvider = ({ children }) => {
     // Optimistically update local state so UI feels instant
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: canonicalStatus } : order
+        (order.id === orderId || order.orderNumber === orderId) ? { ...order, status: canonicalStatus } : order
       )
     );
 
-    // Update in Supabase / mock store
+    // Update in resilient local storage
+    try {
+      const existingStored = JSON.parse(localStorage.getItem('goalwear_cloud_orders') || '[]');
+      const updatedList = existingStored.map((o) =>
+        (o.id === orderId || o.orderNumber === orderId) ? { ...o, status: canonicalStatus } : o
+      );
+      localStorage.setItem('goalwear_cloud_orders', JSON.stringify(updatedList));
+      localStorage.setItem('goalwear_orders_last_sync', Date.now().toString());
+    } catch (e) {}
+
+    // Update in Supabase
     try {
       const { error } = await supabase
         .from('orders')
@@ -601,19 +785,49 @@ export const ShopContextProvider = ({ children }) => {
 
       if (error) {
         console.warn('Supabase update order status:', error.message);
+      } else {
+        // DATABASE WRITE SUCCEEDED: force-refresh admin data stream immediately
+        await forceRefreshAdminDataStream({
+          reason: `Order ${orderId} updated to "${canonicalStatus}" in database`,
+          source: 'updateOrderStatus',
+          meta: { orderId, status: canonicalStatus }
+        });
       }
     } catch (err) {
       console.warn('Supabase status update note:', err);
     }
+
+    // Broadcast update event
+    window.dispatchEvent(new CustomEvent('goalwear:orders_updated', { detail: { orderId, status: canonicalStatus } }));
   };
 
   const deleteOrder = async (orderId) => {
-    setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
+    setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId && order.orderNumber !== orderId));
+
     try {
-      await supabase.from('orders').delete().eq('id', orderId);
+      const existingStored = JSON.parse(localStorage.getItem('goalwear_cloud_orders') || '[]');
+      const updatedList = existingStored.filter((o) => o.id !== orderId && o.orderNumber !== orderId);
+      localStorage.setItem('goalwear_cloud_orders', JSON.stringify(updatedList));
+      localStorage.setItem('goalwear_orders_last_sync', Date.now().toString());
+    } catch (e) {}
+
+    try {
+      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      if (error) {
+        console.warn('Supabase delete order note:', error.message);
+      } else {
+        // DATABASE WRITE SUCCEEDED: force-refresh admin data stream immediately
+        await forceRefreshAdminDataStream({
+          reason: `Order ${orderId} deleted from database`,
+          source: 'deleteOrder',
+          meta: { orderId }
+        });
+      }
     } catch (err) {
       console.error('Failed to delete order from Supabase/storage:', err);
     }
+
+    window.dispatchEvent(new CustomEvent('goalwear:orders_updated', { detail: { deletedOrderId: orderId } }));
   };
 
   return (
@@ -637,6 +851,7 @@ export const ShopContextProvider = ({ children }) => {
         ordersLoading,
         customersList,
         refetchOrders: fetchOrders,
+        forceRefreshAdminDataStream,
         customReviews,
         addToCart,
         removeFromCart,

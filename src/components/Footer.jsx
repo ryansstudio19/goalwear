@@ -37,17 +37,31 @@ export default function Footer() {
         }}>
           {/* Brand Info */}
           <div>
-            <h3 style={{
-              color: '#ffffff',
-              fontFamily: 'var(--font-headings)',
-              fontSize: '1.4rem',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: '20px'
-            }}>
-              GOAL<span style={{ color: 'var(--accent)' }}>WEAR</span>
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <img
+                src="/goalwear-logo.png"
+                alt="GoalWear"
+                referrerPolicy="no-referrer"
+                style={{ 
+                  height: '52px', 
+                  width: '52px',
+                  borderRadius: '10px',
+                  objectFit: 'cover', 
+                  filter: 'drop-shadow(0 0 12px rgba(0, 255, 136, 0.45))' 
+                }}
+              />
+              <h3 style={{
+                color: '#ffffff',
+                fontFamily: 'var(--font-headings)',
+                fontSize: '1.4rem',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                margin: 0
+              }}>
+                GOAL<span style={{ color: 'var(--accent)' }}>WEAR</span>
+              </h3>
+            </div>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '20px' }}>
               GoalWear is Bangladesh's premier sports apparel destination crafting high-grade authentic and fan version football jerseys with custom player typography and nationwide delivery.
             </p>

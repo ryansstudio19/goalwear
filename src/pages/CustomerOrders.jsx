@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient';
 import { Package, Clock, Truck, CheckCircle2, ChevronRight, ArrowLeft, Eye, ExternalLink } from 'lucide-react';
 
 export default function CustomerOrders() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { orders: contextOrders } = useContext(ShopContext);
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -14,6 +14,7 @@ export default function CustomerOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate('/account/login?redirect=/account/orders');
       return;
@@ -48,7 +49,7 @@ export default function CustomerOrders() {
       }
     };
     fetchCustomerOrders();
-  }, [user, profile, contextOrders, navigate]);
+  }, [user, profile, authLoading, contextOrders, navigate]);
 
   const getStatusBadge = (status = '') => {
     switch (status.toUpperCase()) {

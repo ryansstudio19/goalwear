@@ -108,18 +108,34 @@ export default function Navbar() {
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '7px', 
+            gap: '10px',
             cursor: 'pointer',
-            fontFamily: 'var(--font-headings)',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
             flexShrink: 0,
             userSelect: 'none'
           }}
         >
-          <Activity size={23} color="var(--accent)" style={{ filter: 'drop-shadow(0 0 6px var(--accent))' }} />
-          <span style={{ fontSize: 'clamp(1.15rem, 3.8vw, 1.55rem)', whiteSpace: 'nowrap' }}>
+          <img 
+            src="/goalwear-logo.png" 
+            alt="GoalWear Logo" 
+            referrerPolicy="no-referrer"
+            style={{ 
+              height: '44px', 
+              width: '44px',
+              borderRadius: '8px',
+              objectFit: 'cover',
+              filter: 'drop-shadow(0 0 10px rgba(0, 255, 136, 0.45))'
+            }} 
+          />
+          <span style={{ 
+            fontFamily: 'var(--font-headings)',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            fontSize: 'clamp(1.15rem, 3.8vw, 1.55rem)', 
+            whiteSpace: 'nowrap', 
+            display: 'flex', 
+            alignItems: 'center' 
+          }}>
             GOAL<span style={{ color: 'var(--accent)' }}>WEAR</span>
           </span>
         </div>

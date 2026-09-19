@@ -56,8 +56,11 @@ export default function App() {
   // Secret Owner Access Shortcut: Ctrl + Shift + A (or Cmd + Shift + A)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a' || e.code === 'KeyA')) {
+      const isA = e.key === 'A' || e.key === 'a' || e.code === 'KeyA' || e.keyCode === 65;
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && isA) {
         e.preventDefault();
+        e.stopPropagation();
+        sessionStorage.setItem('goalwear_admin_gateway_unlocked', 'true');
         navigate('/admin');
       }
     };

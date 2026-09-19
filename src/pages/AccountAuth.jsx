@@ -8,7 +8,7 @@ import AuthErrorMessage from '../components/AuthErrorMessage';
 import InteractiveSparkButton from '../components/InteractiveSparkButton';
 
 export default function AccountAuth() {
-  const { user, profile, isAdmin, isOwner, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
+  const { user, profile, loading, isAdmin, isOwner, signIn, signUp, signInWithGoogle, signInWithGoogleCredential, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
@@ -231,6 +231,15 @@ export default function AccountAuth() {
       setSubmitting(false);
     }
   };
+
+  // If auth is still loading, wait
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Verifying session...</p>
+      </div>
+    );
+  }
 
   // If already logged in, show customer profile hub
   if (user) {

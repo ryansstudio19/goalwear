@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="iconBg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0c1017" />
+      <stop offset="100%" stop-color="#000000" />
+    </radialGradient>
+    <linearGradient id="iconChrome" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="25%" stop-color="#cbd5e1" />
+      <stop offset="50%" stop-color="#64748b" />
+      <stop offset="75%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="iconNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d9f99d" />
+      <stop offset="50%" stop-color="#00ff88" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="iconGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark Rounded Square / App Icon Badge -->
+  <rect width="512" height="512" rx="112" fill="url(#iconBg)" stroke="rgba(0,255,136,0.3)" stroke-width="6" />
+
+  <!-- Stylized G Emblem -->
+  <g transform="translate(250, 255) skewX(-14) scale(0.72)">
+    <!-- Top Roof -->
+    <path d="M -190,-150 L 175,-150 C 235,-150 265,-110 245,-60 L 200,40 C 190,65 165,85 135,85 L -10,85 L -35,35 L 45,35 C 65,35 80,25 85,10 L 110,-50 C 115,-65 100,-75 85,-75 L -130,-75 Z"
+          fill="url(#iconChrome)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- Top Fin -->
+    <path d="M -210,-150 L -60,-150 L -130,-75 L -260,-75 Z"
+          fill="url(#iconChrome)" stroke="#94a3b8" stroke-width="3" />
+
+    <!-- Electric Neon Notch -->
+    <path d="M -200,-15 L -60,-15 L -95,25 L -235,25 Z"
+          fill="url(#iconNeon)" filter="url(#iconGlow)" />
+
+    <!-- Lower Claw -->
+    <path d="M -260,35 L -65,35 L -10,125 L 160,125 C 220,125 250,165 230,215 L 200,275 C 185,305 150,325 110,325 L -160,325 C -230,325 -260,285 -235,235 L -170,105 L -310,105 Z"
+          fill="url(#iconChrome)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- Cutout Plate -->
+    <path d="M -130,255 L 70,255 C 95,255 110,240 115,225 L 130,195 C 135,180 125,170 110,170 L -40,170 L -90,255 Z"
+          fill="#06090e" stroke="#64748b" stroke-width="3" />
+  </g>
+</svg>

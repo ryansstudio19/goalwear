@@ -1,0 +1,287 @@
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+
+// Photorealistic 3D Metallic Chrome GoalWear Brand Logo Render
+// Features exact brushed steel textures, specular lighting, chamfered bevels, and neon lime accents
+
+const width = 1200;
+const height = 1200;
+
+const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <defs>
+    <!-- Deep Obsidian Studio Background with Subtle Vignette -->
+    <radialGradient id="vignette" cx="50%" cy="48%" r="60%">
+      <stop offset="0%" stop-color="#080a0f" />
+      <stop offset="50%" stop-color="#030406" />
+      <stop offset="90%" stop-color="#000000" />
+      <stop offset="100%" stop-color="#000000" />
+    </radialGradient>
+
+    <!-- Chrome Specular Primary Shimmer Gradient -->
+    <linearGradient id="chromeFace" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="12%" stop-color="#e2e8f0" />
+      <stop offset="28%" stop-color="#94a3b8" />
+      <stop offset="42%" stop-color="#cbd5e1" />
+      <stop offset="58%" stop-color="#f8fafc" />
+      <stop offset="72%" stop-color="#64748b" />
+      <stop offset="86%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+
+    <!-- Deep Bevel Shadow -->
+    <linearGradient id="bevelDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="35%" stop-color="#1e293b" />
+      <stop offset="70%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Top Highlight Edge -->
+    <linearGradient id="edgeHighlight" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#cbd5e1" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Lower Wing Chrome Reflection -->
+    <linearGradient id="lowerWingChrome" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="25%" stop-color="#cbd5e1" />
+      <stop offset="45%" stop-color="#ffffff" />
+      <stop offset="65%" stop-color="#94a3b8" />
+      <stop offset="85%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+
+    <!-- Electric Neon Lime/Volt Accent Gradient -->
+    <linearGradient id="neonVoltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d9f99d" />
+      <stop offset="25%" stop-color="#bef264" />
+      <stop offset="50%" stop-color="#84cc16" />
+      <stop offset="75%" stop-color="#4ade80" />
+      <stop offset="100%" stop-color="#22c55e" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlowEffect" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="coloredBlur" />
+      <feMerge>
+        <feMergeNode in="coloredBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- 3D Heavy Drop Shadow for Emblem and Letters -->
+    <filter id="shadow3D" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.95" />
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+  </defs>
+
+  <!-- Deep True Black Stage Background -->
+  <rect width="${width}" height="${height}" fill="#000000" />
+  <rect width="${width}" height="${height}" fill="url(#vignette)" />
+
+  <!-- Subdued Chrome Floor Reflection Ambient Light -->
+  <ellipse cx="600" cy="520" rx="420" ry="240" fill="#0f172a" opacity="0.3" filter="blur(50px)" />
+
+  <!-- ======================================================================== -->
+  <!-- MAIN G EMBLEM: AERODYNAMIC 3D CHROME BADGE                               -->
+  <!-- ======================================================================== -->
+  <g id="main-emblem" transform="translate(600, 480)" filter="url(#shadow3D)">
+
+    <!-- 1. BASE DEPTH EXTRUSION (Simulating 3D Beveled Depth) -->
+    <g transform="translate(0, 14)" opacity="0.95">
+      <!-- Upper blade depth -->
+      <path d="M -260,-175 L 210,-175 L 290,-115 L 225,-20 L 150,-20 L 70,-20 L 0,-20 L -60,-85 L -20,-85 L 140,-85 L 175,-125 L -165,-125 L -215,-70 L -295,-70 Z"
+            fill="#05070a" />
+      <!-- Lower jaw depth -->
+      <path d="M -345,75 L -95,75 L 0,75 L 75,75 L 195,75 L 255,135 L 210,215 L 145,215 L 60,215 L -195,215 L -265,150 L -180,150 L 120,150 L 155,115 L -250,115 Z"
+            fill="#05070a" />
+    </g>
+
+    <!-- 2. BEVEL UNDER-LAYER (Dark slate perimeter) -->
+    <!-- Upper Top Wing Bevel -->
+    <path d="M -255,-180 L 215,-180 L 295,-120 L 230,-25 L 150,-25 L -65,-90 L 145,-90 L 180,-130 L -160,-130 L -210,-75 L -290,-75 Z"
+          fill="url(#bevelDark)" stroke="#1e293b" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- 3. UPPER CHROME SPEED WING (Polished Brushed Face) -->
+    <path d="M -245,-175 L 205,-175 L 280,-122 L 220,-32 L 145,-32 L -50,-85 L 140,-85 L 172,-122 L -155,-122 L -202,-72 L -278,-72 Z"
+          fill="url(#chromeFace)" stroke="url(#edgeHighlight)" stroke-width="2.5" stroke-linejoin="round" />
+
+    <!-- Top Aerodynamic Highlight Ridge -->
+    <line x1="-240" y1="-173" x2="200" y2="-173" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+    <line x1="-275" y1="-70" x2="-205" y2="-70" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+
+    <!-- 4. ELECTRIC NEON LIME ACCENT IN INNER FOLD OF G -->
+    <polygon points="-28,-28 -245,-8 -295,-5 -60,-22" fill="url(#neonVoltGrad)" filter="url(#neonGlowEffect)" />
+    <polygon points="-28,-28 -245,-8 -295,-5 -60,-22" fill="#d9f99d" opacity="0.8" />
+
+    <!-- 5. LOWER JAW / MAIN CROSSBAR OF G (Depth & Body) -->
+    <!-- Lower Bevel -->
+    <path d="M -340,70 L 195,70 L 260,130 L 215,220 L -190,220 L -270,145 L 125,145 L 160,110 L -245,110 Z"
+          fill="url(#bevelDark)" stroke="#1e293b" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- Lower Chrome Face -->
+    <path d="M -330,75 L 185,75 L 248,132 L 208,212 L -180,212 L -258,145 L 120,145 L 152,115 L -238,115 Z"
+          fill="url(#lowerWingChrome)" stroke="url(#edgeHighlight)" stroke-width="2.5" stroke-linejoin="round" />
+
+    <!-- Lower Blade Highlight Lines -->
+    <line x1="-325" y1="77" x2="180" y2="77" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+    <line x1="-175" y1="210" x2="202" y2="210" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+
+    <!-- Inner Cavity Cutout (Dark reflection chamber) -->
+    <path d="M -120,145 L 90,145 L 125,115 L -85,115 Z" fill="#090d16" />
+  </g>
+
+  <!-- ======================================================================== -->
+  <!-- "GOALWEAR" WORDMARK: 3D METALLIC CHROME WITH NEON 'A' ACCENT             -->
+  <!-- ======================================================================== -->
+  <g id="wordmark" transform="translate(600, 785)" filter="url(#shadow3D)">
+    
+    <!-- 3D Extrusion Shadow Layer -->
+    <g transform="translate(0, 8)" opacity="0.95">
+      <text x="0" y="0"
+            font-family="'Montserrat', 'Arial Black', 'Impact', sans-serif"
+            font-size="94"
+            font-weight="900"
+            letter-spacing="0.14em"
+            font-style="italic"
+            text-anchor="middle"
+            fill="#020408">
+        GOALWEAR
+      </text>
+    </g>
+
+    <!-- Dark Slate Metallic Bevel Edge -->
+    <text x="0" y="0"
+          font-family="'Montserrat', 'Arial Black', 'Impact', sans-serif"
+          font-size="94"
+          font-weight="900"
+          letter-spacing="0.14em"
+          font-style="italic"
+          text-anchor="middle"
+          fill="url(#bevelDark)"
+          stroke="#090d16"
+          stroke-width="8"
+          stroke-linejoin="round">
+      GOALWEAR
+    </text>
+
+    <!-- Polished Chrome Face Surface -->
+    <text x="0" y="0"
+          font-family="'Montserrat', 'Arial Black', 'Impact', sans-serif"
+          font-size="94"
+          font-weight="900"
+          letter-spacing="0.14em"
+          font-style="italic"
+          text-anchor="middle"
+          fill="url(#chromeFace)"
+          stroke="url(#edgeHighlight)"
+          stroke-width="1.5">
+      GOALWEAR
+    </text>
+
+    <!-- Specular Chamfer Highlight Overlay -->
+    <text x="0" y="-1"
+          font-family="'Montserrat', 'Arial Black', 'Impact', sans-serif"
+          font-size="94"
+          font-weight="900"
+          letter-spacing="0.14em"
+          font-style="italic"
+          text-anchor="middle"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="1.2"
+          opacity="0.8">
+      GOALWEAR
+    </text>
+
+    <!-- NEON LIME GREEN ACCENT TRIANGLE IN THE 'A' OF GOALWEAR -->
+    <!-- Positioned precisely within the first 'A' of GOAL (approx x = -140) -->
+    <polygon points="-162,-18 -140,-18 -151,-36" fill="url(#neonVoltGrad)" filter="url(#neonGlowEffect)" />
+    <polygon points="-162,-18 -140,-18 -151,-36" fill="#d9f99d" opacity="0.9" />
+
+    <!-- Also matching neon accent in second 'A' of WEAR -->
+    <polygon points="198,-18 220,-18 209,-36" fill="url(#neonVoltGrad)" filter="url(#neonGlowEffect)" opacity="0.7" />
+  </g>
+</svg>`;
+
+async function renderAssets() {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const distDir = path.join(__dirname, '..', 'dist');
+
+  console.log('Rendering GoalWear Brand Assets from vector definitions...');
+
+  // 1. Full 1200x1200 Logo Master PNG
+  const logoBuffer = Buffer.from(logoSvg);
+  const logoPng1024 = await sharp(logoBuffer)
+    .resize(1024, 1024)
+    .png({ quality: 100, compressionLevel: 8 })
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'goalwear-logo.png'), logoPng1024);
+  fs.writeFileSync(path.join(publicDir, 'goalwear-logo.svg'), logoSvg.trim());
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'goalwear-logo.png'), logoPng1024);
+    fs.writeFileSync(path.join(distDir, 'goalwear-logo.svg'), logoSvg.trim());
+  }
+  console.log('✔ Rendered public/goalwear-logo.png and public/goalwear-logo.svg');
+
+  // 2. Square Emblem App Icon (512x512)
+  const iconPng512 = await sharp(logoBuffer)
+    .extract({ left: 100, top: 100, width: 1000, height: 1000 })
+    .resize(512, 512)
+    .png({ quality: 100 })
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'goalwear-icon-512.png'), iconPng512);
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'goalwear-icon-512.png'), iconPng512);
+  }
+  console.log('✔ Rendered public/goalwear-icon-512.png');
+
+  // 3. Crisp Favicon (64x64)
+  const favicon64 = await sharp(iconPng512)
+    .resize(64, 64)
+    .png()
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'favicon.png'), favicon64);
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'favicon.png'), favicon64);
+  }
+  console.log('✔ Rendered public/favicon.png');
+
+  // 4. Social OpenGraph Link Preview Card (1200x630)
+  const ogCard = await sharp({
+    create: {
+      width: 1200,
+      height: 630,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 1 }
+    }
+  })
+    .composite([
+      {
+        input: await sharp(logoPng1024).resize(600, 600, { fit: 'contain' }).toBuffer(),
+        top: 15,
+        left: 300
+      }
+    ])
+    .png()
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'goalwear-og-preview.png'), ogCard);
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'goalwear-og-preview.png'), ogCard);
+  }
+  console.log('✔ Rendered public/goalwear-og-preview.png');
+}
+
+renderAssets().catch((err) => {
+  console.error('Render error:', err);
+  process.exit(1);
+});

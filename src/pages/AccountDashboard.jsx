@@ -11,15 +11,23 @@ import CustomerOrders from './CustomerOrders';
 import Wishlist from './Wishlist';
 
 export default function AccountDashboard() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       navigate('/account/login');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="container-custom" style={{ paddingTop: '140px', paddingBottom: '80px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Loading account...</p>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
