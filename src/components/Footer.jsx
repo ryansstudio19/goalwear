@@ -180,6 +180,13 @@ export default function Footer() {
         }} className="footer-bottom-flex">
           <div>
             &copy; {new Date().getFullYear()} GoalWear. All Rights Reserved. Made for true football fans.
+            {' '}Website by{' '}
+            <a
+              href="https://ryanzannah.online"
+              style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+            >
+              Ryan Zannah
+            </a>.
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
